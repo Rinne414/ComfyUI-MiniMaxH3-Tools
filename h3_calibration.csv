@@ -1,0 +1,9 @@
+megapixels,seconds,steps,status,width,height,frames,latent_t,video_tokens,sit,sit_samples,peak_vram_mib,wall_s,est_20step_min,video,detail
+0.4,5,8,success,864,480,124,37,14985,25.02,10,21617,250.2,9.2,bench\h3_0.4mp_5s_00001_.mp4,
+0.6,5,8,success,1056,608,124,37,23199,41.48,10,23368,420.3,15.3,bench\h3_0.6mp_5s_00001_.mp4,
+0.8,5,8,success,1216,672,124,37,29526,58.67,10,23296,565.5,21.2,bench\h3_0.8mp_5s_00001_.mp4,
+1.0,5,8,success,1376,768,124,37,38184,90.16,10,23334,915.5,33.3,bench\h3_1.0mp_5s_00001_.mp4,
+0.4,10,8,success,864,480,243,72,29160,64.13,10,23334,638.3,23.5,bench\h3_0.4mp_10s_00001_.mp4,
+0.6,10,8,success,1056,608,243,72,45144,116.5,10,23373,1053.3,40.9,bench\h3_0.6mp_10s_00001_.mp4,
+0.8,10,8,success,1216,672,243,72,57456,167.24,10,23613,1534.4,59.0,bench\h3_0.8mp_10s_00001_.mp4,
+1.0,10,8,aborted,1376,768,243,72,74304,321.14,4,24151,,,,"interrupted at step 4/8 -- other GPU workload started; s/it and peak VRAM no longer isolated. Sampling was progressing, not OOM."

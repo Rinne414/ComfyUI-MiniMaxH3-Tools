@@ -1,0 +1,1433 @@
+{
+ "id": "minimax-h3-av-advanced",
+ "revision": 0,
+ "last_node_id": 30,
+ "last_link_id": 30,
+ "nodes": [
+  {
+   "id": 1,
+   "type": "MarkdownNote",
+   "pos": [
+    -2260,
+    40
+   ],
+   "size": [
+    620,
+    900
+   ],
+   "flags": {},
+   "order": 0,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "MarkdownNote"
+   },
+   "widgets_values": [
+    "# MiniMax-H3 音影同步生成 — 進階工作流\n\nH3 一次同時生成**影像 + 32kHz 立體聲音訊**（對白／環境音／配樂），不是先出片再配音。\n\n## 為什麼不用官方模板\n\n| 項目 | 官方模板 | 這份 |\n|---|---|---|\n| Text encoder | `nvfp4_awq` | `int8_convrot` |\n| Prompt | 單一自由文字框 | H3-Context-IR 三段式結構 |\n| Sigma shift | 沒有暴露 | `MiniMaxH3SigmaShift` 可調 |\n| 音訊 | 只有混流進 mp4 | 另存獨立音軌 |\n\n**nvfp4 是 Blackwell（RTX 50 系）專用。** 在 30/40 系上 ComfyUI 會回報\n`emulated ops: ... nvfp4` 走模擬路徑；`int8_convrot` 才是 `Native ops`。\n\n## 三段式 Prompt（最重要）\n\nMiniMax 官方 README 明講 H3-Context-IR「對最終品質至關重要」，但那套前處理系統\n沒有開源。這裡用三個欄位重建它的輸出格式 —— **開頭的 key 名稱請保留**：\n\n- `integrated_multimodal_description:` — 鏡頭語言、主體外觀、動作、時間點\n- `overall_soundscape:` — 畫面內發生的聲音（環境、動作音）\n- `non_diegetic_music:` — 配樂（畫面外的音樂）\n\n### 對白語法\n`<d>[English] Secure the boats.</d>` — 會生成對應口型與人聲。\n支援 11 種語言：Arabic / Chinese / English / French / German / Italian /\nJapanese / Korean / Portuguese / Russian / Spanish。\n\n### 多鏡頭\n用 `[Shot 1]` `[Shot 2]` 分段，並以 `At 00:03.500,` 標時間點。"
+   ]
+  },
+  {
+   "id": 2,
+   "type": "MarkdownNote",
+   "pos": [
+    -2260,
+    980
+   ],
+   "size": [
+    620,
+    780
+   ],
+   "flags": {},
+   "order": 1,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "MarkdownNote"
+   },
+   "widgets_values": [
+    "## 硬性限制（踩到會被靜默修正）\n\n### 幀數必須落在 17k+5 網格\n節點內部會自動往上進位到 `n % 17 == 5`：\n`5, 22, 39, 56, 73, 90, 107, 124, 141, ... 362`\n\n| 秒數 | 幀數 |\n|---|---|\n| 5s | 124 |\n| 7s | 175 |\n| 10s | 243 |\n| 15s | 362 |\n\n**訓練範圍約 124–362 幀（5–15 秒）**，超出未經驗證。\n上面的 Math Expression 已自動換算，改「秒數」即可。\n\n### 畫布規則\n- 長寬都必須是 **32 的倍數**\n- 短邊原生 768，面積上限 768×1344 ≈ 1.03 MP\n- 超過上限會被等比縮回\n\n### 取樣\n- 這是 **CFG-distilled** 權重 → 用 `BasicGuider`（無 CFG），**不要**接 CFGGuider\n- `res_multistep` + `simple`，20 步是官方預設\n- `shift_video` 12.0 / `shift_audio` 3.0 是模型預設值；\n  兩者會被一起送進 DiT，動到 video 那個就等於改動整條排程"
+   ]
+  },
+  {
+   "id": 3,
+   "type": "MarkdownNote",
+   "pos": [
+    -1600,
+    980
+   ],
+   "size": [
+    600,
+    780
+   ],
+   "flags": {},
+   "order": 2,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "MarkdownNote"
+   },
+   "widgets_values": [
+    "## RTX 3090 24GB 實測\n\n本機實跑數據（832×480 / 124 幀 / 20 步）：\n\n| 項目 | 數值 |\n|---|---|\n| 耗時 | **9.4 分鐘** |\n| VRAM 峰值 | 20.2 / 24 GB |\n| 系統 RAM 剩餘 | 1.6 / 31.8 GB |\n| 產出 | h264 832×480@24fps + AAC 32kHz 立體聲 5.167s |\n\n### 解析度階梯\n`megapixels` 調這個值，`multiple_of` 保持 32：\n\n| MP | 16:9 輸出 | 狀態 |\n|---|---|---|\n| 0.4 | 832×480 | **已實測通過** |\n| 0.6 | 1024×576 | 未測，VRAM 應仍可 |\n| 1.0 | 1344×768 | 模型原生畫布，24GB 可能不足 |\n\n### 記憶體注意\nText encoder 25.3 GB + DiT 20.0 GB = 45 GB，遠超 32 GB 系統記憶體。\n啟動請加 `--disable-smart-memory`，讓 ComfyUI 在兩者之間確實釋放。\n跑之前把瀏覽器以外的大型程式關掉。\n\n### 可選的提速\n啟動日誌若出現\n`WARNING: You need pytorch with cu130 or higher to use optimized CUDA operations`\n代表 `comfy_kitchen` 的 cuda / triton 後端被停用，int8 走 eager 反量化。\n升級到 cu130 版 torch 可啟用融合 kernel，但需連帶重裝\nsageattention / xformers，風險自負。"
+   ]
+  },
+  {
+   "id": 4,
+   "type": "MarkdownNote",
+   "pos": [
+    -980,
+    980
+   ],
+   "size": [
+    600,
+    780
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "MarkdownNote"
+   },
+   "widgets_values": [
+    "## 三種模式怎麼切\n\n### T2VA — 純文字生成（目前狀態）\n兩個 Load Image 節點保持 **靜音（Ctrl+M）**。\n\n### FL2VA — 首/尾幀生成\n- 只解開 `first_frame` → 首幀延伸\n- 只解開 `last_frame` → 倒推到該幀\n- 兩個都解開 → 首尾幀之間補間\n\n注意首幀是**直接拉伸**到畫布（不裁切），尾幀是**等比裁切**。\n所以首幀圖的長寬比最好先對齊你設定的輸出比例。\n\n### Ref2VA — 多模態參考（需換模型）\n把 `UNETLoader` 換成 `minimax_h3_ref2va_pruned_int8_convrot.safetensors`，\n並改用 `MiniMaxH3ReferenceToVideo` 節點。它吃：\n- 圖片 ≤ 9 張 → prompt 裡用 `<Picture 1>` 指涉\n- 影片 ≤ 3 段（2–15 秒）→ `<Video 1>`\n- 音訊 ≤ 3 段 → `<Audio 1>`（可做音色克隆）\n- 全部檔案總數 ≤ 12\n\n這是 H3 最強的模式：角色一致性、動作參考、聲音克隆都在這裡。\n`ref_image_size` 選 `max` 身份保真度最高，但參考 token 每步都要算，會慢好幾倍。"
+   ]
+  },
+  {
+   "id": 5,
+   "type": "UNETLoader",
+   "pos": [
+    -1600,
+    40
+   ],
+   "size": [
+    600,
+    90
+   ],
+   "flags": {},
+   "order": 4,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      14
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "UNETLoader"
+   },
+   "widgets_values": [
+    "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+    "default"
+   ],
+   "title": "DiT — fl2va (T2VA / 首尾幀)"
+  },
+  {
+   "id": 6,
+   "type": "CLIPLoader",
+   "pos": [
+    -1600,
+    180
+   ],
+   "size": [
+    600,
+    110
+   ],
+   "flags": {},
+   "order": 5,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "CLIP",
+     "type": "CLIP",
+     "links": [
+      6
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CLIPLoader"
+   },
+   "widgets_values": [
+    "qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
+    "minimax",
+    "default"
+   ],
+   "title": "H3-Encoder — Qwen3-VL-32B @ layer50 (int8, Ampere 原生)"
+  },
+  {
+   "id": 7,
+   "type": "VAELoader",
+   "pos": [
+    -1600,
+    340
+   ],
+   "size": [
+    600,
+    60
+   ],
+   "flags": {},
+   "order": 6,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      7,
+      24
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAELoader"
+   },
+   "widgets_values": [
+    "minimax_h3_video_vae_fp16.safetensors"
+   ],
+   "title": "Visual VAE (f16t4d24)"
+  },
+  {
+   "id": 8,
+   "type": "VAELoader",
+   "pos": [
+    -1600,
+    440
+   ],
+   "size": [
+    600,
+    60
+   ],
+   "flags": {},
+   "order": 7,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      26
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAELoader"
+   },
+   "widgets_values": [
+    "minimax_h3_audio_vae_fp32.safetensors"
+   ],
+   "title": "Audio VAE (32kHz 立體聲)"
+  },
+  {
+   "id": 9,
+   "type": "PrimitiveStringMultiline",
+   "pos": [
+    -1600,
+    560
+   ],
+   "size": [
+    600,
+    260
+   ],
+   "flags": {},
+   "order": 8,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": [
+      1
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "PrimitiveStringMultiline"
+   },
+   "widgets_values": [
+    "integrated_multimodal_description: [Shot 1] Cinematic medium close-up, shallow depth of field, slow push-in. A middle-aged lighthouse keeper in a weathered yellow oilskin coat stands on a wet stone balcony at dusk, both hands gripping a rusted iron railing. Sea spray drifts across the frame and rain beads on the coat. The keeper turns to face the lens and speaks. <d>[English] The storm is coming. Secure the boats.</d> [Shot 2] At 00:03.500, cut to a low-angle wide shot of the lighthouse against a bruised purple sky, its lamp sweeping a hard beam through the rain as waves detonate against the rocks below."
+   ],
+   "title": "① 畫面 — integrated_multimodal_description"
+  },
+  {
+   "id": 10,
+   "type": "PrimitiveStringMultiline",
+   "pos": [
+    -980,
+    560
+   ],
+   "size": [
+    600,
+    180
+   ],
+   "flags": {},
+   "order": 9,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": [
+      2
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "PrimitiveStringMultiline"
+   },
+   "widgets_values": [
+    "overall_soundscape: Heavy rain drumming on oilskin fabric, deep rhythmic ocean swells breaking against rock far below, gusting wind whistling past the iron railing, and a low metallic groan from the lighthouse structure. On the cut, the perspective opens out: the rain thins into ambient hiss and the wave impacts become broader and more distant."
+   ],
+   "title": "② 環境音 — overall_soundscape"
+  },
+  {
+   "id": 11,
+   "type": "PrimitiveStringMultiline",
+   "pos": [
+    -980,
+    770
+   ],
+   "size": [
+    600,
+    160
+   ],
+   "flags": {},
+   "order": 10,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": [
+      4
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "PrimitiveStringMultiline"
+   },
+   "widgets_values": [
+    "non_diegetic_music: Sparse, tense orchestral underscore - a sustained low cello drone beneath a distant solo violin line, slow build, no percussion, swelling slightly on the cut to the wide shot."
+   ],
+   "title": "③ 配樂 — non_diegetic_music"
+  },
+  {
+   "id": 12,
+   "type": "StringConcatenate",
+   "pos": [
+    -330,
+    560
+   ],
+   "size": [
+    280,
+    100
+   ],
+   "flags": {},
+   "order": 11,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "string_a",
+     "type": "STRING",
+     "link": 1,
+     "widget": {
+      "name": "string_a"
+     }
+    },
+    {
+     "name": "string_b",
+     "type": "STRING",
+     "link": 2,
+     "widget": {
+      "name": "string_b"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": [
+      3
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "StringConcatenate"
+   },
+   "widgets_values": [
+    "",
+    "",
+    "\n"
+   ]
+  },
+  {
+   "id": 13,
+   "type": "StringConcatenate",
+   "pos": [
+    -330,
+    700
+   ],
+   "size": [
+    280,
+    100
+   ],
+   "flags": {},
+   "order": 12,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "string_a",
+     "type": "STRING",
+     "link": 3,
+     "widget": {
+      "name": "string_a"
+     }
+    },
+    {
+     "name": "string_b",
+     "type": "STRING",
+     "link": 4,
+     "widget": {
+      "name": "string_b"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": [
+      10
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "StringConcatenate"
+   },
+   "widgets_values": [
+    "",
+    "",
+    "\n"
+   ],
+   "title": "組成 H3-Context-IR"
+  },
+  {
+   "id": 14,
+   "type": "ResolutionSelector",
+   "pos": [
+    -330,
+    40
+   ],
+   "size": [
+    280,
+    110
+   ],
+   "flags": {},
+   "order": 13,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "width",
+     "type": "INT",
+     "links": [
+      11
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "height",
+     "type": "INT",
+     "links": [
+      12
+     ],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ResolutionSelector"
+   },
+   "widgets_values": [
+    "16:9 (Widescreen)",
+    0.4,
+    32
+   ],
+   "title": "解析度 (0.4MP=832x480 已實測)"
+  },
+  {
+   "id": 15,
+   "type": "PrimitiveFloat",
+   "pos": [
+    -330,
+    200
+   ],
+   "size": [
+    280,
+    60
+   ],
+   "flags": {},
+   "order": 14,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "FLOAT",
+     "type": "FLOAT",
+     "links": [
+      5
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "PrimitiveFloat"
+   },
+   "widgets_values": [
+    5.0
+   ],
+   "title": "秒數"
+  },
+  {
+   "id": 16,
+   "type": "ComfyMathExpression",
+   "pos": [
+    -330,
+    300
+   ],
+   "size": [
+    280,
+    130
+   ],
+   "flags": {},
+   "order": 15,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "values.a",
+     "type": "FLOAT,INT,BOOLEAN",
+     "link": 5
+    }
+   ],
+   "outputs": [
+    {
+     "name": "FLOAT",
+     "type": "FLOAT",
+     "links": [],
+     "slot_index": 0
+    },
+    {
+     "name": "INT",
+     "type": "INT",
+     "links": [
+      13
+     ],
+     "slot_index": 1
+    },
+    {
+     "name": "BOOL",
+     "type": "BOOLEAN",
+     "links": [],
+     "slot_index": 2
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ComfyMathExpression"
+   },
+   "widgets_values": [
+    "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17"
+   ],
+   "title": "秒 → 幀 (17k+5 網格)"
+  },
+  {
+   "id": 17,
+   "type": "LoadImage",
+   "pos": [
+    -330,
+    860
+   ],
+   "size": [
+    280,
+    320
+   ],
+   "flags": {},
+   "order": 16,
+   "mode": 2,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      8
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "MASK",
+     "type": "MASK",
+     "links": [],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage"
+   },
+   "widgets_values": [
+    "example.png",
+    "image"
+   ],
+   "title": "首幀 (靜音中 — Ctrl+M 啟用)"
+  },
+  {
+   "id": 18,
+   "type": "LoadImage",
+   "pos": [
+    -330,
+    1210
+   ],
+   "size": [
+    280,
+    320
+   ],
+   "flags": {},
+   "order": 17,
+   "mode": 2,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      9
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "MASK",
+     "type": "MASK",
+     "links": [],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage"
+   },
+   "widgets_values": [
+    "example.png",
+    "image"
+   ],
+   "title": "尾幀 (靜音中 — Ctrl+M 啟用)"
+  },
+  {
+   "id": 19,
+   "type": "MiniMaxH3ImageToVideo",
+   "pos": [
+    30,
+    40
+   ],
+   "size": [
+    360,
+    260
+   ],
+   "flags": {},
+   "order": 18,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "clip",
+     "type": "CLIP",
+     "link": 6
+    },
+    {
+     "name": "vae",
+     "type": "VAE",
+     "link": 7
+    },
+    {
+     "name": "first_frame",
+     "type": "IMAGE",
+     "link": 8
+    },
+    {
+     "name": "last_frame",
+     "type": "IMAGE",
+     "link": 9
+    },
+    {
+     "name": "prompt",
+     "type": "STRING",
+     "link": 10,
+     "widget": {
+      "name": "prompt"
+     }
+    },
+    {
+     "name": "width",
+     "type": "INT",
+     "link": 11,
+     "widget": {
+      "name": "width"
+     }
+    },
+    {
+     "name": "height",
+     "type": "INT",
+     "link": 12,
+     "widget": {
+      "name": "height"
+     }
+    },
+    {
+     "name": "length",
+     "type": "INT",
+     "link": 13,
+     "widget": {
+      "name": "length"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "links": [
+      16
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      22
+     ],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "MiniMaxH3ImageToVideo"
+   },
+   "widgets_values": [
+    "",
+    832,
+    480,
+    124
+   ]
+  },
+  {
+   "id": 20,
+   "type": "MiniMaxH3SigmaShift",
+   "pos": [
+    30,
+    340
+   ],
+   "size": [
+    360,
+    90
+   ],
+   "flags": {},
+   "order": 19,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 14
+    }
+   ],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      15,
+      17
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "MiniMaxH3SigmaShift"
+   },
+   "widgets_values": [
+    12.0,
+    3.0
+   ],
+   "title": "Sigma Shift — video/audio 排程"
+  },
+  {
+   "id": 21,
+   "type": "BasicGuider",
+   "pos": [
+    440,
+    40
+   ],
+   "size": [
+    280,
+    60
+   ],
+   "flags": {},
+   "order": 20,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 15
+    },
+    {
+     "name": "conditioning",
+     "type": "CONDITIONING",
+     "link": 16
+    }
+   ],
+   "outputs": [
+    {
+     "name": "GUIDER",
+     "type": "GUIDER",
+     "links": [
+      19
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "BasicGuider"
+   },
+   "widgets_values": []
+  },
+  {
+   "id": 22,
+   "type": "KSamplerSelect",
+   "pos": [
+    440,
+    140
+   ],
+   "size": [
+    280,
+    60
+   ],
+   "flags": {},
+   "order": 21,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "SAMPLER",
+     "type": "SAMPLER",
+     "links": [
+      20
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "KSamplerSelect"
+   },
+   "widgets_values": [
+    "res_multistep"
+   ]
+  },
+  {
+   "id": 23,
+   "type": "BasicScheduler",
+   "pos": [
+    440,
+    240
+   ],
+   "size": [
+    280,
+    110
+   ],
+   "flags": {},
+   "order": 22,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 17
+    }
+   ],
+   "outputs": [
+    {
+     "name": "SIGMAS",
+     "type": "SIGMAS",
+     "links": [
+      21
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "BasicScheduler"
+   },
+   "widgets_values": [
+    "simple",
+    20,
+    1.0
+   ]
+  },
+  {
+   "id": 24,
+   "type": "RandomNoise",
+   "pos": [
+    440,
+    390
+   ],
+   "size": [
+    280,
+    80
+   ],
+   "flags": {},
+   "order": 23,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "NOISE",
+     "type": "NOISE",
+     "links": [
+      18
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "RandomNoise"
+   },
+   "widgets_values": [
+    0,
+    "randomize"
+   ]
+  },
+  {
+   "id": 25,
+   "type": "SamplerCustomAdvanced",
+   "pos": [
+    770,
+    40
+   ],
+   "size": [
+    280,
+    140
+   ],
+   "flags": {},
+   "order": 24,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "noise",
+     "type": "NOISE",
+     "link": 18
+    },
+    {
+     "name": "guider",
+     "type": "GUIDER",
+     "link": 19
+    },
+    {
+     "name": "sampler",
+     "type": "SAMPLER",
+     "link": 20
+    },
+    {
+     "name": "sigmas",
+     "type": "SIGMAS",
+     "link": 21
+    },
+    {
+     "name": "latent_image",
+     "type": "LATENT",
+     "link": 22
+    }
+   ],
+   "outputs": [
+    {
+     "name": "output",
+     "type": "LATENT",
+     "links": [
+      23,
+      25
+     ],
+     "slot_index": 0
+    },
+    {
+     "name": "denoised_output",
+     "type": "LATENT",
+     "links": [],
+     "slot_index": 1
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "SamplerCustomAdvanced"
+   },
+   "widgets_values": []
+  },
+  {
+   "id": 26,
+   "type": "VAEDecode",
+   "pos": [
+    1090,
+    40
+   ],
+   "size": [
+    240,
+    60
+   ],
+   "flags": {},
+   "order": 25,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 23
+    },
+    {
+     "name": "vae",
+     "type": "VAE",
+     "link": 24
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      27
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAEDecode"
+   },
+   "widgets_values": []
+  },
+  {
+   "id": 27,
+   "type": "VAEDecodeAudio",
+   "pos": [
+    1090,
+    140
+   ],
+   "size": [
+    240,
+    60
+   ],
+   "flags": {},
+   "order": 26,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 25
+    },
+    {
+     "name": "vae",
+     "type": "VAE",
+     "link": 26
+    }
+   ],
+   "outputs": [
+    {
+     "name": "AUDIO",
+     "type": "AUDIO",
+     "links": [
+      28,
+      30
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAEDecodeAudio"
+   },
+   "widgets_values": []
+  },
+  {
+   "id": 28,
+   "type": "CreateVideo",
+   "pos": [
+    1090,
+    240
+   ],
+   "size": [
+    240,
+    110
+   ],
+   "flags": {},
+   "order": 27,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "images",
+     "type": "IMAGE",
+     "link": 27
+    },
+    {
+     "name": "audio",
+     "type": "AUDIO",
+     "link": 28
+    }
+   ],
+   "outputs": [
+    {
+     "name": "VIDEO",
+     "type": "VIDEO",
+     "links": [
+      29
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CreateVideo"
+   },
+   "widgets_values": [
+    24,
+    8
+   ]
+  },
+  {
+   "id": 29,
+   "type": "SaveVideo",
+   "pos": [
+    1370,
+    40
+   ],
+   "size": [
+    400,
+    380
+   ],
+   "flags": {},
+   "order": 28,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "video",
+     "type": "VIDEO",
+     "link": 29
+    }
+   ],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "SaveVideo"
+   },
+   "widgets_values": [
+    "video/MiniMax_H3",
+    "auto",
+    "auto"
+   ]
+  },
+  {
+   "id": 30,
+   "type": "SaveAudio",
+   "pos": [
+    1370,
+    460
+   ],
+   "size": [
+    400,
+    120
+   ],
+   "flags": {},
+   "order": 29,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "audio",
+     "type": "AUDIO",
+     "link": 30
+    }
+   ],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "SaveAudio"
+   },
+   "widgets_values": [
+    "audio/MiniMax_H3"
+   ],
+   "title": "獨立音軌 (flac) — 方便重剪"
+  }
+ ],
+ "links": [
+  [
+   1,
+   9,
+   0,
+   12,
+   0,
+   "STRING"
+  ],
+  [
+   2,
+   10,
+   0,
+   12,
+   1,
+   "STRING"
+  ],
+  [
+   3,
+   12,
+   0,
+   13,
+   0,
+   "STRING"
+  ],
+  [
+   4,
+   11,
+   0,
+   13,
+   1,
+   "STRING"
+  ],
+  [
+   5,
+   15,
+   0,
+   16,
+   0,
+   "FLOAT,INT,BOOLEAN"
+  ],
+  [
+   6,
+   6,
+   0,
+   19,
+   0,
+   "CLIP"
+  ],
+  [
+   7,
+   7,
+   0,
+   19,
+   1,
+   "VAE"
+  ],
+  [
+   8,
+   17,
+   0,
+   19,
+   2,
+   "IMAGE"
+  ],
+  [
+   9,
+   18,
+   0,
+   19,
+   3,
+   "IMAGE"
+  ],
+  [
+   10,
+   13,
+   0,
+   19,
+   4,
+   "STRING"
+  ],
+  [
+   11,
+   14,
+   0,
+   19,
+   5,
+   "INT"
+  ],
+  [
+   12,
+   14,
+   1,
+   19,
+   6,
+   "INT"
+  ],
+  [
+   13,
+   16,
+   1,
+   19,
+   7,
+   "INT"
+  ],
+  [
+   14,
+   5,
+   0,
+   20,
+   0,
+   "MODEL"
+  ],
+  [
+   15,
+   20,
+   0,
+   21,
+   0,
+   "MODEL"
+  ],
+  [
+   16,
+   19,
+   0,
+   21,
+   1,
+   "CONDITIONING"
+  ],
+  [
+   17,
+   20,
+   0,
+   23,
+   0,
+   "MODEL"
+  ],
+  [
+   18,
+   24,
+   0,
+   25,
+   0,
+   "NOISE"
+  ],
+  [
+   19,
+   21,
+   0,
+   25,
+   1,
+   "GUIDER"
+  ],
+  [
+   20,
+   22,
+   0,
+   25,
+   2,
+   "SAMPLER"
+  ],
+  [
+   21,
+   23,
+   0,
+   25,
+   3,
+   "SIGMAS"
+  ],
+  [
+   22,
+   19,
+   1,
+   25,
+   4,
+   "LATENT"
+  ],
+  [
+   23,
+   25,
+   0,
+   26,
+   0,
+   "LATENT"
+  ],
+  [
+   24,
+   7,
+   0,
+   26,
+   1,
+   "VAE"
+  ],
+  [
+   25,
+   25,
+   0,
+   27,
+   0,
+   "LATENT"
+  ],
+  [
+   26,
+   8,
+   0,
+   27,
+   1,
+   "VAE"
+  ],
+  [
+   27,
+   26,
+   0,
+   28,
+   0,
+   "IMAGE"
+  ],
+  [
+   28,
+   27,
+   0,
+   28,
+   1,
+   "AUDIO"
+  ],
+  [
+   29,
+   28,
+   0,
+   29,
+   0,
+   "VIDEO"
+  ],
+  [
+   30,
+   27,
+   0,
+   30,
+   0,
+   "AUDIO"
+  ]
+ ],
+ "groups": [],
+ "config": {},
+ "extra": {
+  "ds": {
+   "scale": 0.55,
+   "offset": [
+    2400,
+    60
+   ]
+  }
+ },
+ "version": 0.4
+}

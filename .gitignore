@@ -1,0 +1,7 @@
+﻿__pycache__/
+*.pyc
+output/
+*.mp4
+*.flac
+*.safetensors
+.venv/
