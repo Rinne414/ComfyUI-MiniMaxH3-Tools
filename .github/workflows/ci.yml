@@ -86,6 +86,10 @@ jobs:
               "MiniMaxH3XTemporalTrim",
               "MiniMaxH3XPromptLint",
               "MiniMaxH3XAudioReroll",
+              "MiniMaxH3XNF4ModelLoader",
+              "MiniMaxH3XNF4TextEncoderLoader",
+              "MiniMaxH3XNF4VideoVAELoader",
+              "MiniMaxH3XNF4AudioVAELoader",
           }
           if names != expected:
               raise RuntimeError(
