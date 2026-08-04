@@ -1,11 +1,12 @@
 # ComfyUI-MiniMaxH3-Tools
 
-Twelve focused ComfyUI nodes for gaps in the native MiniMax-H3 workflow.
+ComfyUI support for DiffSynth-Studio's MiniMax-H3 NF4 weights, plus eight
+focused tools for gaps in the native MiniMax-H3 workflow.
 
 MiniMax-H3 generates video and synchronized stereo audio in one sampling pass.
-ComfyUI provides the model-specific conditioning and sigma-shift nodes; this extension
-adds the planning, validation, and AV-latent operations that normal ComfyUI
-nodes cannot safely perform on H3 data.
+Four experimental loaders make the complete NF4 FL2VA stack usable in ComfyUI.
+The other nodes add planning, prompt validation, and AV-latent operations that
+normal ComfyUI nodes cannot safely perform on H3 data.
 
 ## Why this exists
 
@@ -26,6 +27,14 @@ predicts another machine's runtime.
 
 MiniMax-H3 support requires ComfyUI `0.30.0` or later.
 
+Install `MiniMax-H3 Tools` from ComfyUI Manager, or use Comfy CLI:
+
+```bash
+comfy node install minimax-h3-tools
+```
+
+For a manual installation:
+
 ```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools.git
@@ -40,40 +49,71 @@ python -m pip install "bitsandbytes>=0.50.0"
 
 Restart ComfyUI and search for `MiniMax H3`.
 
-The model weights are separate. Use the files and directory layout documented
-by [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3).
+Model weights are separate. For the standard INT8 path, use the files documented
+by [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3). For NF4,
+use the DiffSynth files below.
 
 ### Experimental NF4 loaders
 
-MiniMax H3 NF4 has already been implemented by
-[DiffSynth-Studio](https://github.com/modelscope/DiffSynth-Studio/tree/main/examples/minimax_h3),
-but its pre-quantized files do not load through ComfyUI's native loaders. These
-four nodes add the missing ComfyUI path:
+MiniMax publishes the base H3 model. DiffSynth-Studio publishes the pre-quantized
+BitsAndBytes NF4 weights and its own inference implementation. This repository
+is an independent compatibility layer that adapts those weights to ComfyUI; it
+is not official MiniMax, DiffSynth-Studio, or ComfyUI support.
 
-| Node | ComfyUI model folder | Expected DiffSynth filename |
-|---|---|---|
-| `MiniMax H3 NF4 Model Loader` | `models/diffusion_models` | `minimax-h3-fl2va-nf4.safetensors` |
-| `MiniMax H3 NF4 Text Encoder Loader` | `models/text_encoders` | `minimax-h3-text-encoder-nf4.safetensors` |
-| `MiniMax H3 NF4 Video VAE Loader` | `models/vae` | `video_vae_nf4.safetensors` |
-| `MiniMax H3 NF4 Audio VAE Loader` | `models/vae` | `audio_vae_nf4.safetensors` |
+Download the four FL2VA files from
+[ModelScope](https://modelscope.cn/models/DiffSynth-Studio/MiniMax-H3-NF4) or
+[Hugging Face](https://huggingface.co/DiffSynth-Studio/MiniMax-H3-NF4):
 
-Use these in place of `UNETLoader`, `CLIPLoader`, and the two `VAELoader`
-nodes. The loaders require the serialized `bitsandbytes__nf4` quantization
-state and fail explicitly on FP4, missing sidecars, non-H3 models, unavailable
-CUDA, or incomplete files. LoRA patches on NF4 Linear layers are not currently
-supported.
+| NF4 node | Replaces | ComfyUI model folder | DiffSynth filename | Size |
+|---|---|---|---|---:|
+| `MiniMax H3 NF4 Model Loader` | `UNETLoader` | `models/diffusion_models` | `minimax-h3-fl2va-nf4.safetensors` | 17.16 GB |
+| `MiniMax H3 NF4 Text Encoder Loader` | `CLIPLoader` | `models/text_encoders` | `minimax-h3-text-encoder-nf4.safetensors` | 15.32 GB |
+| `MiniMax H3 NF4 Video VAE Loader` | video `VAELoader` | `models/vae` | `video_vae_nf4.safetensors` | 1.61 GB |
+| `MiniMax H3 NF4 Audio VAE Loader` | audio `VAELoader` | `models/vae` | `audio_vae_nf4.safetensors` | 0.28 GB |
 
-Validation in this repository covers the real BitsAndBytes pre-quantized
-round trip, ComfyUI model-patcher lifecycle, and CUDA matmul on an RTX 3090 with
-BitsAndBytes 0.50.0. A complete 36.9 GB NF4 stack also generated a prompt-aligned
-864x480, 124-frame video in a 20-step ComfyUI workflow. The result contained
-124 H.264 frames at 24 fps, synchronized 32 kHz stereo AAC, and a separate
-5.175-second stereo FLAC with finite samples. Component-isolation runs separately
-verified the NF4 Qwen3-VL encoder, video VAE, and audio VAE against the standard
-ComfyUI DiT path. The loader adapts DiffSynth's head-interleaved DiT QKV layout
-before sampling. These nodes remain experimental because validation currently
-covers one CUDA/BitsAndBytes configuration. Do not use `.incomplete` or
-`.aria2log` mirror artifacts as model files.
+Keep the rest of the native H3 workflow unchanged. Select the downloaded files
+in the four NF4 loaders, then connect their `MODEL`, `CLIP`, and `VAE` outputs
+where the standard loaders were connected.
+
+#### NF4 or INT8?
+
+NF4 stores quantized Linear weights in 4 bits, so it reduces download and disk
+footprint. It still dequantizes weights for computation, so smaller does not
+automatically mean faster or better output. The standard comparison below uses
+Comfy-Org's optimized `int8_convrot` DiT and text encoder with its FP16/FP32
+VAEs; it is not a comparison against generic INT8.
+
+| Tested stack | Four model files | RTX 3090, 864x480, 124 frames, 20 steps |
+|---|---:|---:|
+| DiffSynth NF4 | 34.4 GB | 15:34 |
+| Comfy-Org `int8_convrot` plus standard VAEs | 53.9 GB | 11:47 |
+
+On this machine NF4 used about 36% less disk space but took about 32% longer.
+Treat these timings as one tested configuration, not a hardware-independent
+benchmark.
+
+#### Validation and limits
+
+The loaders restore the serialized `bitsandbytes__nf4` quantization state,
+logical Linear shapes, and DiffSynth's head-interleaved DiT QKV layout. They
+fail explicitly on FP4, missing quantization sidecars, non-H3 models,
+unavailable CUDA, or incomplete files.
+
+Validation covers real BitsAndBytes pre-quantized round trips, ComfyUI's model
+patcher and offload lifecycle, and CUDA matmul on an RTX 3090 with BitsAndBytes
+0.50.0. The complete 34.4 GB NF4 stack generated a prompt-aligned 864x480,
+124-frame video in a 20-step ComfyUI workflow, with 24 fps H.264 video,
+synchronized 32 kHz stereo AAC, and a separate 5.175-second stereo FLAC.
+Component-isolation runs also verified the NF4 Qwen3-VL encoder and both VAEs.
+
+Current limits:
+
+- only the NF4 FL2VA diffusion model has completed end-to-end validation;
+  the available NF4 Ref2VA file is not yet claimed as supported
+- LoRA patches on NF4 Linear layers are not supported
+- the tested runtime is NVIDIA CUDA; other GPUs and BitsAndBytes versions are
+  unverified
+- `.incomplete` and `.aria2log` download artifacts are not model files
 
 ## Nodes
 

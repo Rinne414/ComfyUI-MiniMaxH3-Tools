@@ -1,6 +1,6 @@
 [project]
-name = "comfyui-minimaxh3-tools"
-description = "Practical MiniMax-H3 prompt, canvas, audio reroll, and AV latent tools for ComfyUI."
+name = "minimax-h3-tools"
+description = "ComfyUI loaders for MiniMax-H3 NF4 weights, plus prompt, canvas, audio reroll, and AV latent tools."
 version = "0.1.0"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -18,7 +18,7 @@ Repository = "https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools"
 [tool.comfy]
 PublisherId = "peter119lee"
 DisplayName = "MiniMax-H3 Tools"
-Icon = ""
+requires-comfyui = ">=0.30.0"
 
 [tool.ruff]
 target-version = "py310"
