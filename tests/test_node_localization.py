@@ -19,6 +19,13 @@ EXPECTED_DISPLAY_NAMES = {
     "MiniMaxH3XTemporalTrim": "MiniMax H3 Temporal Trim / 时长裁剪",
     "MiniMaxH3XAudioReroll": (
         "MiniMax H3 Audio Reroll (Experimental) / 音频重生成（实验性）"),
+    "MiniMaxH3XNF4ModelLoader": "MiniMax H3 NF4 Model Loader / NF4 模型加载",
+    "MiniMaxH3XNF4TextEncoderLoader": (
+        "MiniMax H3 NF4 Text Encoder Loader / NF4 文本编码器加载"),
+    "MiniMaxH3XNF4VideoVAELoader": (
+        "MiniMax H3 NF4 Video VAE Loader / NF4 视频 VAE 加载"),
+    "MiniMaxH3XNF4AudioVAELoader": (
+        "MiniMax H3 NF4 Audio VAE Loader / NF4 音频 VAE 加载"),
 }
 
 NODE_FILES = (
@@ -26,6 +33,7 @@ NODE_FILES = (
     REPOSITORY_ROOT / "prompt_lint.py",
     REPOSITORY_ROOT / "av_latent.py",
     REPOSITORY_ROOT / "audio_reroll.py",
+    REPOSITORY_ROOT / "nf4_loader.py",
 )
 
 

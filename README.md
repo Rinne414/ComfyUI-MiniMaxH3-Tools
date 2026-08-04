@@ -1,6 +1,6 @@
 # ComfyUI-MiniMaxH3-Tools
 
-Eight focused ComfyUI nodes for gaps in the native MiniMax-H3 workflow.
+Twelve focused ComfyUI nodes for gaps in the native MiniMax-H3 workflow.
 
 MiniMax-H3 generates video and synchronized stereo audio in one sampling pass.
 ComfyUI provides the model-specific conditioning and sigma-shift nodes; this extension
@@ -16,6 +16,7 @@ nodes cannot safely perform on H3 data.
 | The generation path accepts canvases outside the documented trained area | A long render can complete with unvalidated geometry | Canvas Planner warns or explicitly clamps to the trained area |
 | H3 prompt structure fails silently | Misspelled fields, bad shot timing, or malformed dialogue reduce quality without an error | Deterministic Prompt Lint passes clean prompts through and reports specific violations |
 | Core H3 has no "reuse this performance with different sound" workflow | Changing sound normally regenerates the entire clip | Experimental Audio Reroll reuses the finished video as a clean reference and produces a new AV sample |
+| DiffSynth H3 NF4 files store Linear weights as flattened BitsAndBytes tensors | Native ComfyUI cannot infer the H3 architecture or restore the quantization state | Four experimental NF4 loaders restore the logical shapes and load the DiT, Qwen3-VL encoder, and both VAEs |
 
 This extension does not replace ComfyUI's native MiniMax-H3 nodes, download model
 weights, rewrite prompts with an LLM, or claim that one machine's benchmark
@@ -30,11 +31,49 @@ cd ComfyUI/custom_nodes
 git clone https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools.git
 ```
 
-No extra Python dependencies are required. Restart ComfyUI and search for
-`MiniMax H3`.
+The eight core tools require no extra Python dependencies. The four NF4 loaders
+require BitsAndBytes in ComfyUI's Python environment:
+
+```bash
+python -m pip install "bitsandbytes>=0.50.0"
+```
+
+Restart ComfyUI and search for `MiniMax H3`.
 
 The model weights are separate. Use the files and directory layout documented
 by [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3).
+
+### Experimental NF4 loaders
+
+MiniMax H3 NF4 has already been implemented by
+[DiffSynth-Studio](https://github.com/modelscope/DiffSynth-Studio/tree/main/examples/minimax_h3),
+but its pre-quantized files do not load through ComfyUI's native loaders. These
+four nodes add the missing ComfyUI path:
+
+| Node | ComfyUI model folder | Expected DiffSynth filename |
+|---|---|---|
+| `MiniMax H3 NF4 Model Loader` | `models/diffusion_models` | `minimax-h3-fl2va-nf4.safetensors` |
+| `MiniMax H3 NF4 Text Encoder Loader` | `models/text_encoders` | `minimax-h3-text-encoder-nf4.safetensors` |
+| `MiniMax H3 NF4 Video VAE Loader` | `models/vae` | `video_vae_nf4.safetensors` |
+| `MiniMax H3 NF4 Audio VAE Loader` | `models/vae` | `audio_vae_nf4.safetensors` |
+
+Use these in place of `UNETLoader`, `CLIPLoader`, and the two `VAELoader`
+nodes. The loaders require the serialized `bitsandbytes__nf4` quantization
+state and fail explicitly on FP4, missing sidecars, non-H3 models, unavailable
+CUDA, or incomplete files. LoRA patches on NF4 Linear layers are not currently
+supported.
+
+Validation in this repository covers the real BitsAndBytes pre-quantized
+round trip, ComfyUI model-patcher lifecycle, and CUDA matmul on an RTX 3090 with
+BitsAndBytes 0.50.0. A complete 36.9 GB NF4 stack also generated a prompt-aligned
+864x480, 124-frame video in a 20-step ComfyUI workflow. The result contained
+124 H.264 frames at 24 fps, synchronized 32 kHz stereo AAC, and a separate
+5.175-second stereo FLAC with finite samples. Component-isolation runs separately
+verified the NF4 Qwen3-VL encoder, video VAE, and audio VAE against the standard
+ComfyUI DiT path. The loader adapts DiffSynth's head-interleaved DiT QKV layout
+before sampling. These nodes remain experimental because validation currently
+covers one CUDA/BitsAndBytes configuration. Do not use `.incomplete` or
+`.aria2log` mirror artifacts as model files.
 
 ## Nodes
 
@@ -169,13 +208,15 @@ python -m pytest custom_nodes/ComfyUI-MiniMaxH3-Tools/tests -q
 
 The tests cover exact canvas/frame calculations, strict calibration profile
 validation, bit-identical Split/Join round trips, stream mismatch failures,
-spatial and temporal isolation, and MiniMax's published prompt examples.
+spatial and temporal isolation, MiniMax's published prompt examples, NF4
+quant-state parsing, head-interleaved QKV attention, and optional real
+BitsAndBytes CUDA round trips.
 
 ## Repository layout
 
 | Path | Purpose |
 |---|---|
-| `*.py` | Installable ComfyUI extension and eight nodes |
+| `*.py` | Installable ComfyUI extension and twelve nodes |
 | `tests/` | Behavior tests |
 | `workflows/` | Loadable planning, AV-latent, reroll, and advanced generation workflows |
 | `docs/` | Node-specific experimental findings |

@@ -7,6 +7,9 @@ requires-python = ">=3.10"
 dependencies = []
 readme = "README.md"
 
+[project.optional-dependencies]
+nf4 = ["bitsandbytes>=0.50.0"]
+
 [project.urls]
 Repository = "https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools"
 "Bug Tracker" = "https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools/issues"

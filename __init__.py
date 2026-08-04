@@ -12,6 +12,7 @@ if __package__:
         MiniMaxH3XUpscaleVideoLatent,
     )
     from .canvas_solver import MiniMaxH3XCanvasSolver
+    from .nf4_loader import get_nf4_nodes
     from .prompt_lint import MiniMaxH3XPromptLint
 else:
     from audio_reroll import MiniMaxH3XAudioReroll
@@ -23,6 +24,7 @@ else:
         MiniMaxH3XUpscaleVideoLatent,
     )
     from canvas_solver import MiniMaxH3XCanvasSolver
+    from nf4_loader import get_nf4_nodes
     from prompt_lint import MiniMaxH3XPromptLint
 
 NODES = (
@@ -34,6 +36,7 @@ NODES = (
     MiniMaxH3XTemporalTrim,
     MiniMaxH3XPromptLint,
     MiniMaxH3XAudioReroll,
+    *get_nf4_nodes(),
 )
 
 
