@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMFYUI_COMMIT: 14b05228cef127ce529bc0c08660770d4af3e9a8
+      COMFYUI_PATH: ${{ github.workspace }}/../ComfyUI
+      PYTHONPATH: ${{ github.workspace }}/../ComfyUI:${{ github.workspace }}
+
+    steps:
+      - name: Check out extension
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Check out pinned ComfyUI
+        run: |
+          git init "$COMFYUI_PATH"
+          git -C "$COMFYUI_PATH" remote add origin https://github.com/Comfy-Org/ComfyUI.git
+          git -C "$COMFYUI_PATH" fetch --depth=1 origin "$COMFYUI_COMMIT"
+          git -C "$COMFYUI_PATH" checkout --detach FETCH_HEAD
+          test "$(git -C "$COMFYUI_PATH" rev-parse HEAD)" = "$COMFYUI_COMMIT"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio
+          python -m pip install -r "$COMFYUI_PATH/requirements.txt"
+          python -m pip install pytest ruff
+
+      - name: Lint and compile
+        run: |
+          python -m ruff check .
+          python -m compileall -q .
+
+      - name: Verify generated workflows
+        run: |
+          python scripts/generate_example_workflows.py
+          git diff --exit-code -- workflows
+
+      - name: Run tests
+        run: python -m pytest tests -q
+
+      - name: Smoke-test extension registration
+        run: |
+          python - <<'PY'
+          import asyncio
+          import importlib.util
+          import sys
+          from pathlib import Path
+
+          root = Path.cwd()
+          spec = importlib.util.spec_from_file_location(
+              "comfyui_minimaxh3_tools",
+              root / "__init__.py",
+              submodule_search_locations=[str(root)],
+          )
+          if spec is None or spec.loader is None:
+              raise RuntimeError("failed to create the extension import spec")
+          module = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = module
+          spec.loader.exec_module(module)
+          extension = asyncio.run(module.comfy_entrypoint())
+          nodes = asyncio.run(extension.get_node_list())
+          names = {node.__name__ for node in nodes}
+          expected = {
+              "MiniMaxH3XCanvasSolver",
+              "MiniMaxH3XSplitAV",
+              "MiniMaxH3XJoinAV",
+              "MiniMaxH3XLatentInfo",
+              "MiniMaxH3XUpscaleVideoLatent",
+              "MiniMaxH3XTemporalTrim",
+              "MiniMaxH3XPromptLint",
+              "MiniMaxH3XAudioReroll",
+          }
+          if names != expected:
+              raise RuntimeError(
+                  "extension registration mismatch: expected %r, got %r"
+                  % (sorted(expected), sorted(names))
+              )
+          print("registered nodes:", ", ".join(sorted(names)))
+          PY

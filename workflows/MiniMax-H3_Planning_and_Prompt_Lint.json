@@ -1,0 +1,179 @@
+{
+ "id": "minimax-h3-planning-and-prompt-lint",
+ "revision": 0,
+ "last_node_id": 3,
+ "last_link_id": 0,
+ "nodes": [
+  {
+   "id": 1,
+   "type": "MarkdownNote",
+   "pos": [
+    60,
+    40
+   ],
+   "size": [
+    1080,
+    240
+   ],
+   "flags": {},
+   "order": 0,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "MarkdownNote"
+   },
+   "widgets_values": [
+    "# Planning and prompt check / \u89c4\u5212\u4e0e\u63d0\u793a\u8bcd\u68c0\u67e5\n\n**English:** Use the canvas planner to calculate a legal H3 size and frame count before loading models. Use Prompt Lint to validate the documented H3 prompt structure. This workflow does not load a model and has no output node.\n\n**\u7b80\u4f53\u4e2d\u6587\uff1a** \u5728\u52a0\u8f7d\u6a21\u578b\u524d\uff0c\u4f7f\u7528\u753b\u5e03\u89c4\u5212\u8282\u70b9\u8ba1\u7b97\u5408\u6cd5\u7684 H3 \u5c3a\u5bf8\u548c\u5e27\u6570\uff1b\u4f7f\u7528\u63d0\u793a\u8bcd\u68c0\u67e5\u8282\u70b9\u9a8c\u8bc1 H3 \u6587\u6863\u89c4\u5b9a\u7684\u63d0\u793a\u8bcd\u7ed3\u6784\u3002\u672c\u5de5\u4f5c\u6d41\u4e0d\u52a0\u8f7d\u6a21\u578b\uff0c\u4e5f\u6ca1\u6709\u8f93\u51fa\u8282\u70b9\u3002"
+   ],
+   "title": "How to use / \u4f7f\u7528\u8bf4\u660e"
+  },
+  {
+   "id": 2,
+   "type": "MiniMaxH3XCanvasSolver",
+   "pos": [
+    60,
+    330
+   ],
+   "size": [
+    480,
+    330
+   ],
+   "flags": {},
+   "order": 1,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "width",
+     "type": "INT",
+     "links": [],
+     "slot_index": 0
+    },
+    {
+     "name": "height",
+     "type": "INT",
+     "links": [],
+     "slot_index": 1
+    },
+    {
+     "name": "frames",
+     "type": "INT",
+     "links": [],
+     "slot_index": 2
+    },
+    {
+     "name": "latent_t",
+     "type": "INT",
+     "links": [],
+     "slot_index": 3
+    },
+    {
+     "name": "audio_t",
+     "type": "INT",
+     "links": [],
+     "slot_index": 4
+    },
+    {
+     "name": "video_tokens",
+     "type": "INT",
+     "links": [],
+     "slot_index": 5
+    },
+    {
+     "name": "est_sit_seconds",
+     "type": "FLOAT",
+     "links": [],
+     "slot_index": 6
+    },
+    {
+     "name": "est_total_minutes",
+     "type": "FLOAT",
+     "links": [],
+     "slot_index": 7
+    },
+    {
+     "name": "report",
+     "type": "STRING",
+     "links": [],
+     "slot_index": 8
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "MiniMaxH3XCanvasSolver"
+   },
+   "widgets_values": [
+    "16:9 (Widescreen)",
+    0.4,
+    5.0,
+    20,
+    "none (report tokens only)",
+    24.0,
+    false
+   ],
+   "title": "Plan exact H3 geometry / \u89c4\u5212\u7cbe\u786e H3 \u753b\u5e03"
+  },
+  {
+   "id": 3,
+   "type": "MiniMaxH3XPromptLint",
+   "pos": [
+    600,
+    330
+   ],
+   "size": [
+    600,
+    430
+   ],
+   "flags": {},
+   "order": 2,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "prompt",
+     "type": "STRING",
+     "links": [],
+     "slot_index": 0
+    },
+    {
+     "name": "warnings",
+     "type": "STRING",
+     "links": [],
+     "slot_index": 1
+    },
+    {
+     "name": "is_clean",
+     "type": "BOOLEAN",
+     "links": [],
+     "slot_index": 2
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "MiniMaxH3XPromptLint"
+   },
+   "widgets_values": [
+    "integrated_multimodal_description: [Shot 1] A locked medium shot of a ceramic artist shaping a bowl at a sunlit workbench.\noverall_soundscape: Quiet studio room tone, wet clay turning on the wheel, and soft tool contact.\nnon_diegetic_music: N/A",
+    "t2va",
+    5.0,
+    0,
+    0,
+    0,
+    false
+   ],
+   "title": "Validate H3 prompt / \u68c0\u67e5 H3 \u63d0\u793a\u8bcd"
+  }
+ ],
+ "links": [],
+ "groups": [],
+ "config": {},
+ "extra": {
+  "ds": {
+   "scale": 0.8,
+   "offset": [
+    40,
+    20
+   ]
+  }
+ },
+ "version": 0.4
+}

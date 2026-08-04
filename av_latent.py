@@ -74,9 +74,11 @@ class MiniMaxH3XSplitAV(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="MiniMaxH3XSplitAV",
-            display_name="MiniMax H3 Split AV Latent",
+            display_name="MiniMax H3 Split AV Latent / 拆分音视频潜空间",
             category="model/latent/minimax",
-            description="Split an H3 AV latent into separate video and audio latents.",
+            description=(
+                "Split an H3 AV latent into separate video and audio latents. / "
+                "将 H3 音视频潜空间拆分为独立的视频和音频潜空间。"),
             inputs=[io.Latent.Input("latent")],
             outputs=[io.Latent.Output(display_name="video"),
                      io.Latent.Output(display_name="audio")],
@@ -94,16 +96,22 @@ class MiniMaxH3XJoinAV(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="MiniMaxH3XJoinAV",
-            display_name="MiniMax H3 Join AV Latent",
+            display_name="MiniMax H3 Join AV Latent / 合并音视频潜空间",
             category="model/latent/minimax",
             description=(
                 "Recombine video and audio latents into an H3 AV latent. Validates "
-                "that both streams describe the same frame count."),
+                "that both streams describe the same frame count. / 将视频和音频潜空间"
+                "重新合并为 H3 音视频潜空间，并验证两个流对应相同帧数。"),
             inputs=[
                 io.Latent.Input("video"),
                 io.Latent.Input("audio"),
                 io.Boolean.Input("strict", default=True,
-                                 tooltip="Reject streams whose latent_t and audio_t disagree, or whose latent_t is off the 17k+5 grid. Turn off only when deliberately building an irregular pair."),
+                                 tooltip=(
+                                     "Reject streams whose latent_t and audio_t disagree, "
+                                     "or whose latent_t is off the 17k+5 grid. Turn off "
+                                     "only when deliberately building an irregular pair. / "
+                                     "拒绝时长不一致或不符合 17k+5 网格的流；仅在有意构建"
+                                     "非标准组合时关闭。")),
             ],
             outputs=[io.Latent.Output()],
         )
@@ -160,9 +168,11 @@ class MiniMaxH3XLatentInfo(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="MiniMaxH3XLatentInfo",
-            display_name="MiniMax H3 AV Latent Info",
+            display_name="MiniMax H3 AV Latent Info / 音视频潜空间信息",
             category="model/latent/minimax",
-            description="Report both stream shapes, implied duration and token count.",
+            description=(
+                "Report both stream shapes, implied duration and token count. / "
+                "报告两个流的形状、推算时长和令牌数。"),
             inputs=[io.Latent.Input("latent")],
             outputs=[io.String.Output(display_name="report"),
                      io.Int.Output(display_name="frames"),
@@ -209,15 +219,18 @@ class MiniMaxH3XUpscaleVideoLatent(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="MiniMaxH3XUpscaleVideoLatent",
-            display_name="MiniMax H3 Upscale Video Latent",
+            display_name="MiniMax H3 Upscale Video Latent / 放大视频潜空间",
             category="model/latent/minimax",
             description=(
                 "Resize the video stream of an H3 AV latent, leaving audio alone. "
-                "Target pixel dimensions snap to multiples of 32."),
+                "Target pixel dimensions snap to multiples of 32. / 仅调整 H3 音视频"
+                "潜空间中的视频尺寸，音频保持不变；目标像素尺寸对齐到 32 的倍数。"),
             inputs=[
                 io.Latent.Input("latent"),
                 io.Int.Input("width", default=1216, min=32, max=16384, step=32,
-                             tooltip="Target pixel width; divided by 16 for the latent grid."),
+                             tooltip=(
+                                 "Target pixel width; divided by 16 for the latent grid. / "
+                                 "目标像素宽度；潜空间网格宽度为该值除以 16。")),
                 io.Int.Input("height", default=672, min=32, max=16384, step=32),
                 io.Combo.Input("upscale_method",
                                options=["bilinear", "bicubic", "nearest-exact", "area"],
@@ -256,15 +269,18 @@ class MiniMaxH3XTemporalTrim(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="MiniMaxH3XTemporalTrim",
-            display_name="MiniMax H3 Temporal Trim",
+            display_name="MiniMax H3 Temporal Trim / 时长裁剪",
             category="model/latent/minimax",
             description=(
                 "Shorten an H3 AV latent, keeping video and audio coherent. The "
-                "result is snapped down to the model's 17k+5 frame grid."),
+                "result is snapped to the model's 17k+5 frame grid. / 在保持音视频"
+                "同步的同时缩短 H3 潜空间，并将结果对齐到模型的 17k+5 帧网格。"),
             inputs=[
                 io.Latent.Input("latent"),
                 io.Float.Input("keep_seconds", default=5.0, min=0.2, max=20.0, step=0.1,
-                               tooltip="Duration to keep from the start, snapped DOWN to the frame grid."),
+                               tooltip=(
+                                   "Duration to keep from the start, aligned to the "
+                                   "frame grid. / 从开头保留的时长，并对齐到帧网格。")),
             ],
             outputs=[io.Latent.Output(),
                      io.Int.Output(display_name="frames")],

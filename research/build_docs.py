@@ -32,7 +32,7 @@ def splice(path, marker, end_pred, body):
     with open(path, encoding="utf-8") as f:
         lines = f.read().splitlines()
     try:
-        i = next(n for n, l in enumerate(lines) if marker in l)
+        i = next(n for n, line in enumerate(lines) if marker in line)
     except StopIteration:
         print("!! marker %r not found in %s" % (marker, os.path.basename(path)))
         return False
@@ -49,9 +49,9 @@ def splice(path, marker, end_pred, body):
 def main():
     body = tables()
     splice(README, "<!-- CALIBRATION_TABLES -->",
-           lambda l: l.strip() == "---", body)
+           lambda line: line.strip() == "---", body)
     splice(CIVITAI, "<!-- CALIBRATION_PLACEHOLDER -->",
-           lambda l: l.startswith("## "), body)
+           lambda line: line.startswith("## "), body)
 
 
 if __name__ == "__main__":

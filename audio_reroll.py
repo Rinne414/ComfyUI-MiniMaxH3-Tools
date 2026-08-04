@@ -69,22 +69,39 @@ class MiniMaxH3XAudioReroll(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="MiniMaxH3XAudioReroll",
-            display_name="MiniMax H3 Audio Reroll",
+            display_name=(
+                "MiniMax H3 Audio Reroll (Experimental) / 音频重生成（实验性）"),
             category="model/conditioning/minimax",
             description=(
-                "Condition a fresh H3 sampling run on an already-generated video "
+                "Experimental: condition a fresh H3 sampling run on an already-generated video "
                 "latent, so a new soundtrack can be produced without re-authoring "
                 "the picture. The video is strongly preserved but resampled, not "
-                "frozen -- use video_passthrough downstream for a bit-identical mux."),
+                "frozen -- use video_passthrough downstream for a bit-identical mux. / "
+                "以已生成的视频潜空间作为参考重新采样音频；画面会被强力保留但仍会"
+                "重采样。如需逐位一致的画面，请在下游使用 video_passthrough 混流。"),
             inputs=[
                 io.Conditioning.Input("conditioning",
-                    tooltip="Conditioning from an H3 conditioning node, with the soundscape/music text changed."),
+                    tooltip=(
+                        "Conditioning from an H3 conditioning node, with the "
+                        "soundscape/music text changed. / 来自 H3 条件节点的条件，"
+                        "其中环境音或音乐文字已经修改。")),
                 io.Latent.Input("av_latent",
-                    tooltip="The AV latent from the run you want to keep the picture of."),
+                    tooltip=(
+                        "The AV latent from the run whose picture you want to keep. / "
+                        "需要保留画面的原始运行所产生的音视频潜空间。")),
                 io.Float.Input("video_cond_strength", default=1.0, min=0.5, max=1.0, step=0.005,
-                    tooltip="Noise augmentation on the video reference. 1.0 feeds it perfectly clean (maximum preservation); lower values let the picture drift. The DiT's own default for keyframes is 0.999."),
+                    tooltip=(
+                        "Noise augmentation on the video reference. 1.0 feeds it "
+                        "perfectly clean for maximum preservation; lower values let "
+                        "the picture drift. The DiT keyframe default is 0.999. / "
+                        "视频参考的噪声增强值。1.0 表示完全干净并最大程度保留画面；"
+                        "较低值会允许画面变化。DiT 的关键帧默认值为 0.999。")),
                 io.Boolean.Input("reset_audio_latent", default=True,
-                    tooltip="Start the audio stream from zeros so the sampler writes a genuinely new track. Off reuses the old audio latent as the starting point, which biases the result toward the original."),
+                    tooltip=(
+                        "Start the audio stream from zeros so the sampler writes a "
+                        "genuinely new track. Off reuses the old audio latent and "
+                        "biases the result toward the original. / 从零开始音频流，让"
+                        "采样器生成全新音轨；关闭时复用旧音频潜空间，结果会偏向原音轨。")),
             ],
             outputs=[
                 io.Conditioning.Output(display_name="positive"),

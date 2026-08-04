@@ -1,0 +1,18 @@
+[project]
+name = "comfyui-minimaxh3-tools"
+description = "Practical MiniMax-H3 prompt, canvas, audio reroll, and AV latent tools for ComfyUI."
+version = "0.1.0"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = []
+readme = "README.md"
+
+[project.urls]
+Repository = "https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools"
+"Bug Tracker" = "https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools/issues"
+"MiniMax-H3" = "https://huggingface.co/MiniMaxAI/MiniMax-H3"
+
+[tool.comfy]
+PublisherId = "peter119lee"
+DisplayName = "MiniMax-H3 Tools"
+Icon = ""

@@ -6,6 +6,9 @@ semantics also validates the graph the user loads in the browser.
 import json
 import os
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPOSITORY_ROOT = os.path.dirname(HERE)
+
 # ---------------------------------------------------------------- slot tables
 # (input_name, type) / (output_name, type) per node class, in schema order.
 SLOTS = {
@@ -342,13 +345,14 @@ def main():
         "extra": {"ds": {"scale": 0.55, "offset": [2400, 60]}},
         "version": 0.4,
     }
-    out_dir = os.environ.get("H3_WORKFLOW_DIR", os.path.join(os.getcwd(), "workflows"))
+    out_dir = os.environ.get(
+        "H3_WORKFLOW_DIR", os.path.join(REPOSITORY_ROOT, "workflows"))
     os.makedirs(out_dir, exist_ok=True)
     ui_path = os.path.join(out_dir, "MiniMax-H3_AV_Advanced.json")
     with open(ui_path, "w", encoding="utf-8") as f:
         json.dump(ui, f, ensure_ascii=False, indent=1)
     api_path = os.environ.get("H3_API_JSON",
-                              os.path.join(os.getcwd(), "h3_advanced_api.json"))
+                              os.path.join(HERE, "h3_advanced_api.json"))
     with open(api_path, "w", encoding="utf-8") as f:
         json.dump(api, f, ensure_ascii=False, indent=1)
     print("UI  ->", ui_path)

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "rtx-3090-int8-convrot-xformers": {
+      "label": "Single RTX 3090 24 GiB, 32 GiB RAM, Windows 11, ComfyUI 0.30.0, torch 2.8.0+cu128, xformers, FL2VA int8_convrot",
+      "vram_total_gib": 24.0,
+      "overhead_seconds": 130.0,
+      "vram_plateau_mib": 23400,
+      "vram_plateau_tokens": 23000,
+      "thrash_tokens": 70000,
+      "measurements": [
+        {"video_tokens": 14985, "seconds_per_iteration": 25.02},
+        {"video_tokens": 23199, "seconds_per_iteration": 41.48},
+        {"video_tokens": 29526, "seconds_per_iteration": 58.67},
+        {"video_tokens": 38184, "seconds_per_iteration": 90.16},
+        {"video_tokens": 29160, "seconds_per_iteration": 64.13},
+        {"video_tokens": 45144, "seconds_per_iteration": 116.50},
+        {"video_tokens": 57456, "seconds_per_iteration": 167.24}
+      ]
+    }
+  }
+}

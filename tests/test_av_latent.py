@@ -3,7 +3,7 @@
 Runs against real NestedTensor pairs, so it needs torch and ComfyUI's comfy
 package on the path. Invoke from the ComfyUI root:
 
-    python -m pytest custom_nodes/comfyui-minimax-h3-toolkit/tests -q
+    python -m pytest custom_nodes/ComfyUI-MiniMaxH3-Tools/tests -q
 """
 
 import os
