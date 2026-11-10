@@ -49,6 +49,25 @@ All notable changes to this project are recorded here. The format follows
   `v1` branch that published 0.1.0, instead of the moving `v1` branch.
 - `.github/` is excluded from the registry package.
 
+### Fixed
+
+- The NF4 diffusion model no longer stops with
+  `AttributeError: '_NF4Linear' object has no attribute '_combined_linear'` when
+  ComfyUI's dynamic VRAM prefetches the next block.
+- The NF4 loaders no longer write a fresh copy of every weight back into system
+  RAM on each run. Weights now reach the GPU through ComfyUI's own loading path,
+  as core models' weights do.
+- Torch Compile, hook and multi-GPU nodes can rebuild an NF4 model or text
+  encoder instead of failing with
+  `unexpected keyword argument 'disable_dynamic'`.
+- A LoRA on an NF4 model now stops the run with a message that says what to do.
+  Under dynamic VRAM it used to be ignored without a word.
+- The NF4 video VAE works with `--fast fp16_accumulation`.
+- Split AV Latent, Join AV Latent, Temporal Trim and Upscale Video Latent keep a
+  latent's noise mask instead of dropping it. Split gives each stream its own
+  mask, Join puts them back together, and Temporal Trim cuts the mask to the
+  kept duration.
+
 ## [0.1.0] - 2026-08-04
 
 First public release on the Comfy Registry.
