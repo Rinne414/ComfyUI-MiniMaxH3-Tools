@@ -2,11 +2,11 @@
 
 [English](README.md) | 简体中文
 
-MiniMax-H3 在一次采样中同时生成视频和同步的立体声音频。这个插件补上了 ComfyUI 里缺少的周边工具：加入队列前规划画布和帧数、检查提示词、直接处理成对的视频/音频潜空间、只重新生成声音，以及加载 DiffSynth-Studio 的 NF4 权重。
+在 ComfyUI 中运行 MiniMax-H3 的工具集。它让 MiniMax-H3-Image（文字生成图像和图片编辑）能在 24 GB 显存、32 GB 内存的电脑上运行，也补上了 ComfyUI 在 MiniMax-H3 视频（含音频）方面缺少的工具：规划画布和帧数、检查提示词、直接处理成对的视频/音频潜空间、只重新生成声音，以及加载 DiffSynth-Studio 的 NF4 权重。
 
-**安装：**在 ComfyUI Manager 中搜索 `MiniMax-H3 Tools`（或运行 `comfy node install minimax-h3-tools`），然后重启 ComfyUI。需要 ComfyUI `0.30.0` 或更高版本。四个 NF4 加载节点还需要 BitsAndBytes，见[安装](#安装)。
+**安装：**在 ComfyUI Manager 中搜索 `MiniMax-H3 Tools`（或运行 `comfy node install minimax-h3-tools`），然后重启 ComfyUI。视频工具需要 ComfyUI `0.30.0` 或更高版本，图像节点需要 `0.45.0` 或更高版本，见[安装](#安装)。
 
-**从这里开始：**打开 ComfyUI 的“模板”浏览器，在本插件的条目中选择 `MiniMax-H3_Planning_and_Prompt_Lint`（浏览器以安装文件夹命名该条目：通过注册表安装是 `minimax-h3-tools`，用 git clone 安装是 `ComfyUI-MiniMaxH3-Tools`），然后运行。它不需要任何模型文件。所有示例也都是 [`example_workflows/`](example_workflows/) 里的普通 `.json` 文件，可以直接拖进编辑器。
+**从这里开始：**打开 ComfyUI 的“模板”浏览器，在本插件的条目中选择一个示例（浏览器以安装文件夹命名该条目：通过注册表安装是 `minimax-h3-tools`，用 git clone 安装是 `ComfyUI-MiniMaxH3-Tools`）。想做图像，请打开 `MiniMax-H3-Image_T2I_Low_RAM`；它需要 [H3-Image](#h3-image低内存) 中列出的模型文件，ComfyUI 会提示下载。想先试试视频工具，请打开 `MiniMax-H3_Planning_and_Prompt_Lint`，它不需要任何模型文件。所有示例也都是 [`example_workflows/`](example_workflows/) 里的普通 `.json` 文件，可以直接拖进编辑器。
 
 **完全在本地运行。**这些节点不发起任何网络请求，也不会向外发送任何内容。模型文件由你自己下载，或者在示例工作流里缺少模型时，点击 ComfyUI 显示的下载链接，由 ComfyUI 下载。
 
@@ -25,9 +25,52 @@ MiniMax-H3 在一次采样中同时生成视频和同步的立体声音频。这
 
 这个插件不会替代 ComfyUI 原生的 MiniMax-H3 节点，不会下载模型权重，不会用 LLM 改写提示词，也不会声称某一台机器的基准测试能预测另一台机器的运行时间。
 
+## H3-Image（低内存）
+
+MiniMax-H3-Image 的 DiT 有 330 亿参数。在 24 GB 显存、32 GB 内存的电脑上，原生节点无法运行它：27 GB 的 Qwen3-VL 文本编码器在编码后仍留在内存里，DiT 没有空间和它同时加载。这些节点先加载编码器、编码、再释放它，然后才加载 DiT，所以这样的电脑一键就能做文字生成图像或图片编辑。
+
+| 32 GB 内存下原生节点的问题 | 这个插件怎么做 |
+|---|---|
+| 文本编码器在编码后仍留在内存里 | **图像提示词编码（低内存）**加载它、编码、释放，运行期间关闭固定（pinned）主机内存 |
+| 改变尺寸会重新运行文本编码器 | **图像尺寸**单独生成潜空间；提示词不变时直接使用 ComfyUI 的缓存或 `output/h3image_encode_cache` 里的结果 |
+| 模型卡的 16 MP 尺寸只在一张表里 | **图像尺寸**内置这些尺寸，并用同一公式给出 4 / 8 / 20 MP |
+| 简短的想法需要自己写成详细的英文描述 | **图像提示词扩写**（实验性）在本地用官方模板的模型和指令完成 |
+
+**要求：**ComfyUI 需要带有原生 MiniMax-H3-Image 支持：`0.45.0` 或更高版本，这是第一个包含核心 pull request #17655（commit `ede4e5fe8`）的发布版本。在更旧的 ComfyUI 上，本插件的其余部分仍会加载，日志会说明图像节点不可用。
+
+**模型**（来自 [Comfy-Org/MiniMax-H3-Image](https://huggingface.co/Comfy-Org/MiniMax-H3-Image)、[Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3) 和 [Comfy-Org/Qwen3.5](https://huggingface.co/Comfy-Org/Qwen3.5)）。示例工作流带有这些下载链接：
+
+| 文件夹 | 文件 | 大小 |
+|---|---|---:|
+| `models/diffusion_models` | `minimax_h3_image_pruned_w4a8.safetensors`（默认）或 `minimax_h3_image_pruned_int8_convrot.safetensors` | 12.5 GB / 21 GB |
+| `models/text_encoders` | `qwen3vl_32b_minimax_h3_int8_convrot.safetensors` | 27 GB |
+| `models/vae` | `minimax_h3_image_vae_fp16.safetensors` | 1.2 GB |
+| `models/text_encoders` | `qwen3.5_9b_w4a8_gptq.safetensors`，仅提示词扩写使用 | 7.3 GB |
+
+**示例：**
+
+| 工作流 | 用途 |
+|---|---|
+| `MiniMax-H3-Image_T2I_Low_RAM.json` | 文字生成图像。提示词扩写已打开 |
+| `MiniMax-H3-Image_Edit_Low_RAM.json` | 编辑一张图片。提示词扩写已关闭，因此人脸、发型和文字会按你写的保留 |
+| `MiniMax-H3-Image_Edit_Two_Pictures_Low_RAM.json` | 用第二张参考图编辑（`<Picture 1>` 和 `<Picture 2>`） |
+
+**实测**（同一台机器：RTX 3090 24 GB、32 GB 内存、w4a8 模型、6 步、cfg 1）：
+
+- 4096x4096：46 秒，显存约 18 GB
+- 21 MP：62 秒
+- 4 MP：约 20 秒
+- 新提示词的文本编码：约 7.5 秒；提示词不变时不会再次编码
+
+请把这些数字当作一种测试配置的结果，不是对其他硬件的承诺。
+
+**图像提示词扩写（实验性）。**它把任何语言的简短想法改写成模型需要的详细英文描述。指令文字属于 Comfy-Org，不包含在本插件里：节点在运行时从 ComfyUI 安装的官方 MiniMax-H3-Image 模板中读取（ComfyUI `0.45.0` 安装的 `comfyui-workflow-templates` 包）。找不到该模板时，节点会在报告里说明，并原样传递你的提示词，不加载任何东西。扩写可能改变图片上的人脸、发型和文字，所以编辑示例中它是关闭的。
+
+**GGUF 文本编码器（实验性，未验证）。**使用 ComfyUI-GGUF `6ea2651` 时，原生加载路径会把 14.6 GB 的 `Q4_K_M` 文件复制进 32 GB 电脑的主机内存，并因此被中止。图像提示词编码（低内存）改为把 `.gguf` 文件直接加载到 GPU，但这条路径尚未验证。推荐使用 INT8 的 `.safetensors` 编码器。
+
 ## 安装
 
-MiniMax-H3 支持需要 ComfyUI `0.30.0` 或更高版本。
+MiniMax-H3 视频支持需要 ComfyUI `0.30.0` 或更高版本。H3-Image 节点需要 `0.45.0` 或更高版本。
 
 从 ComfyUI Manager 安装 `MiniMax-H3 Tools`，或使用 Comfy CLI：
 
@@ -42,7 +85,7 @@ cd ComfyUI/custom_nodes
 git clone https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools.git
 ```
 
-八个核心工具不需要额外的 Python 依赖。四个 NF4 加载节点需要在 ComfyUI 的 Python 环境中安装 BitsAndBytes：
+八个核心工具和五个 H3-Image 节点不需要额外的 Python 依赖。四个 NF4 加载节点需要在 ComfyUI 的 Python 环境中安装 BitsAndBytes：
 
 ```bash
 python -m pip install "bitsandbytes>=0.50.0"
@@ -92,6 +135,31 @@ NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁�
 - `.incomplete` 和 `.aria2log` 是下载中间文件，不是模型文件
 
 ## 节点
+
+全部 17 个节点：
+
+| 节点 | 作用 |
+|---|---|
+| MiniMax H3 Canvas Planner（画布规划） | 加入队列前规划画布、帧网格、潜空间尺寸和 token 数 |
+| MiniMax H3 Prompt Lint（提示词检查） | 按 MiniMax 文档格式检查视频提示词 |
+| MiniMax H3 Split AV Latent（拆分音视频潜空间） | 把成对的视频/音频潜空间拆成两个潜空间 |
+| MiniMax H3 Join AV Latent（合并音视频潜空间） | 重新合并视频和音频潜空间，严格模式下会验证 |
+| MiniMax H3 AV Latent Info（音视频潜空间信息） | 报告音视频潜空间的形状、时长和 token 数 |
+| MiniMax H3 Upscale Video Latent（放大视频潜空间） | 只用插值调整视频流的尺寸 |
+| MiniMax H3 Temporal Trim（时长裁剪） | 在帧网格上同时缩短视频和音频 |
+| MiniMax H3 Audio Reroll（音频重生成，实验性） | 针对已完成的视频潜空间采样新的音频 |
+| MiniMax H3 NF4 Model Loader（NF4 模型加载，实验性） | 加载 DiffSynth 的 NF4 扩散模型 |
+| MiniMax H3 NF4 Text Encoder Loader（NF4 文本编码器加载，实验性） | 加载 DiffSynth 的 NF4 Qwen3-VL 编码器 |
+| MiniMax H3 NF4 Video VAE Loader（NF4 视频 VAE 加载，实验性） | 加载 DiffSynth 的 NF4 视频 VAE |
+| MiniMax H3 NF4 Audio VAE Loader（NF4 音频 VAE 加载，实验性） | 加载 DiffSynth 的 NF4 音频 VAE |
+| MiniMax H3 Image Encode (Low RAM)（图像提示词编码，低内存） | 编码提示词和图片，然后释放文本编码器 |
+| MiniMax H3 Image Prompt Expander（图像提示词扩写） | 实验性。把简短想法扩写成详细的英文描述 |
+| MiniMax H3 Image Size（图像尺寸） | 画布预设（长宽比和百万像素）以及空的图像潜空间 |
+| MiniMax H3 Save Conditioning（保存条件） | 把编码后的提示词保存到 `output/conditioning` |
+| MiniMax H3 Load Conditioning（加载条件） | 加载“保存条件”存下的提示词 |
+
+下面的小节介绍视频和音频节点。H3-Image 节点见 [H3-Image（低内存）](#h3-image低内存)。
+
 
 画布规划、提示词检查和音视频潜空间信息还会把文字报告附在任务上，因此报告会随这次运行记录在队列和历史中。若要在画布上查看，请把报告输出连接到核心的 `Preview as Text` 节点；规划和音视频潜空间两个示例已经这样连接。
 
@@ -170,8 +238,11 @@ NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁�
 | `MiniMax-H3_AV_Latent_Tools.json` | 演示拆分、仅视频缩放、严格合并、时长裁剪和潜空间检查 | 否 |
 | `MiniMax-H3_Audio_Reroll_Experimental.json` | 生成原始音视频潜空间，用修改后的声音文字重生成，再把原始画面与新音频混流 | 是，需要 `ref2va` 以及文本编码器和两个 VAE |
 | `MiniMax-H3_AV_Advanced.json` | 用于存档硬件研究的原始高级 T2VA/FL2VA 工作流 | 是 |
+| `MiniMax-H3-Image_T2I_Low_RAM.json` | 文字生成图像，使用低内存编码器和提示词扩写 | 是，需要 H3-Image 模型 |
+| `MiniMax-H3-Image_Edit_Low_RAM.json` | 编辑一张图片 | 是，需要 H3-Image 模型 |
+| `MiniMax-H3-Image_Edit_Two_Pictures_Low_RAM.json` | 用第二张参考图编辑一张图片 | 是，需要 H3-Image 模型 |
 
-三个以工具为主的示例由 `scripts/generate_example_workflows.py` 生成。测试会验证每一条连线，并确保已提交的 JSON 不会与生成器脱节。
+三个以工具为主的视频示例由 `scripts/generate_example_workflows.py` 生成。测试会验证每一条连线，并确保已提交的 JSON 不会与生成器脱节。
 
 ## 模型约束
 
@@ -201,7 +272,7 @@ python -m pytest custom_nodes/ComfyUI-MiniMaxH3-Tools/tests -q
 
 | 路径 | 用途 |
 |---|---|
-| `*.py` | 可安装的 ComfyUI 扩展和十二个节点 |
+| `*.py` | 可安装的 ComfyUI 扩展和十七个节点 |
 | `tests/` | 行为测试 |
 | `locales/` | 英文、简体中文和繁体中文的节点文字 |
 | `example_workflows/` | 可直接加载的规划、音视频潜空间、重生成和高级生成工作流 |

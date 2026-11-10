@@ -1,7 +1,7 @@
 [project]
 name = "minimax-h3-tools"
-description = "ComfyUI nodes for MiniMax-H3 video and audio generation: NF4 model loaders, prompt checking, canvas planning, audio-video latent tools, and audio reroll."
-version = "0.1.0"
+description = "ComfyUI nodes for MiniMax-H3: low-RAM image generation and editing, plus video and audio tools for canvas planning, prompt checking, latents, audio reroll, and NF4 loading."
+version = "0.2.0"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = []

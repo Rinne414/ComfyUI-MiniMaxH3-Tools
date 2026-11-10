@@ -20,7 +20,8 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(github.event_name == 'schedule' && '{"comfyui":["pinned","master"]}' || '{"comfyui":["pinned"]}') }}
     env:
-      COMFYUI_COMMIT: 14b05228cef127ce529bc0c08660770d4af3e9a8
+      # v0.45.0, the first release with native MiniMax-H3-Image support (the H3-Image nodes need it)
+      COMFYUI_COMMIT: 989d93d0d968e704c589ce0146bb18c77f6b50cc
       COMFYUI_PATH: ${{ github.workspace }}/../ComfyUI
       PYTHONPATH: ${{ github.workspace }}/../ComfyUI:${{ github.workspace }}
 

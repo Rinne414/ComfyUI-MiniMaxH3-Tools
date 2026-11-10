@@ -29,7 +29,7 @@ def test_finds_the_installed_pack_under_any_known_folder_name():
 
 
 def test_finds_the_pack_keyed_by_its_full_path_like_comfyui_does():
-    key = "I:\\ComfyUI-aki-v1_x_6\\ComfyUI\\custom_nodes\\ComfyUI-GGUF.nodes"
+    key = "C:\\apps\\ComfyUI\\custom_nodes\\ComfyUI-GGUF.nodes"
     mods = {
         key: types.SimpleNamespace(CLIPLoaderGGUF=_Loader),
         "other.nodes": types.SimpleNamespace(),

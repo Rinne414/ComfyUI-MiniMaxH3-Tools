@@ -2,22 +2,24 @@
 
 English | [简体中文](README_zh.md)
 
-MiniMax-H3 generates video and synchronized stereo audio in one sampling pass.
-This pack adds the tools around it that ComfyUI does not have: planning the
-canvas and frame count before you queue, checking prompts, working on the paired
-video/audio latent, rerolling only the sound, and loading DiffSynth-Studio's NF4
-weights.
+Tools for running MiniMax-H3 in ComfyUI. They let MiniMax-H3-Image (text to image
+and picture editing) run on a 24 GB GPU with 32 GB of RAM, and they add what
+ComfyUI lacks for MiniMax-H3 video with audio: planning the canvas and frame
+count, checking prompts, working on the paired video/audio latent, rerolling only
+the sound, and loading DiffSynth-Studio's NF4 weights.
 
 **Install:** search `MiniMax-H3 Tools` in ComfyUI Manager (or run
-`comfy node install minimax-h3-tools`) and restart ComfyUI. It needs ComfyUI
-`0.30.0` or later. The four NF4 loaders also need BitsAndBytes; see
+`comfy node install minimax-h3-tools`) and restart ComfyUI. The video tools need
+ComfyUI `0.30.0` or later and the image nodes need `0.45.0` or later; see
 [Install](#install).
 
-**Start here:** open ComfyUI's Templates browser and pick
-`MiniMax-H3_Planning_and_Prompt_Lint` from this pack's entry (the browser names
-it after the install folder: `minimax-h3-tools` for a registry install,
-`ComfyUI-MiniMaxH3-Tools` for a git clone), then run it. It needs no model files.
-Every example is also a plain `.json` file in
+**Start here:** open ComfyUI's Templates browser and pick an example from this
+pack's entry (the browser names it after the install folder: `minimax-h3-tools`
+for a registry install, `ComfyUI-MiniMaxH3-Tools` for a git clone). For images,
+open `MiniMax-H3-Image_T2I_Low_RAM`; it needs the model files listed in
+[H3-Image](#h3-image-low-ram) and ComfyUI offers to download them. To try the
+video tools first, open `MiniMax-H3_Planning_and_Prompt_Lint`, which needs no
+model files. Every example is also a plain `.json` file in
 [`example_workflows/`](example_workflows/) that you can drag into the editor.
 
 **Runs locally.** The nodes make no network requests and send nothing online.
@@ -42,9 +44,74 @@ This extension does not replace ComfyUI's native MiniMax-H3 nodes, download mode
 weights, rewrite prompts with an LLM, or claim that one machine's benchmark
 predicts another machine's runtime.
 
+## H3-Image (low RAM)
+
+MiniMax-H3-Image has a 33B-parameter DiT. On a 24 GB GPU with 32 GB of RAM the
+stock nodes cannot run it: the 27 GB Qwen3-VL text encoder stays in RAM after
+encoding, so the DiT has no room to load next to it. These nodes load the encoder,
+encode, and free it before the DiT loads, so one click runs text to image or
+editing on that PC.
+
+| Problem with the stock nodes on 32 GB RAM | What this pack does |
+|---|---|
+| The text encoder stays in RAM after encoding | **Image Encode (Low RAM)** loads it, encodes, and frees it, with pinned host memory off while it runs |
+| Changing the size re-runs the text encoder | **Image Size** makes the latent separately, and an unchanged prompt is reused from ComfyUI's cache or from `output/h3image_encode_cache` |
+| The model card's 16 MP sizes are only in a table | **Image Size** has them built in, and 4 / 8 / 20 MP from the same formula |
+| A short idea has to be written out as a long English description | **Prompt Expander** (experimental) does it locally with the model and instruction of the official template |
+
+**Requires** ComfyUI with native MiniMax-H3-Image support: `0.45.0` or later, the
+first release that includes core pull request #17655 (commit `ede4e5fe8`). On an
+older ComfyUI the rest of this pack still loads and the log says the image nodes
+are unavailable.
+
+**Models** (from [Comfy-Org/MiniMax-H3-Image](https://huggingface.co/Comfy-Org/MiniMax-H3-Image),
+[Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3) and
+[Comfy-Org/Qwen3.5](https://huggingface.co/Comfy-Org/Qwen3.5)). The example
+workflows carry these download links:
+
+| Folder | File | Size |
+|---|---|---:|
+| `models/diffusion_models` | `minimax_h3_image_pruned_w4a8.safetensors` (default) or `minimax_h3_image_pruned_int8_convrot.safetensors` | 12.5 GB / 21 GB |
+| `models/text_encoders` | `qwen3vl_32b_minimax_h3_int8_convrot.safetensors` | 27 GB |
+| `models/vae` | `minimax_h3_image_vae_fp16.safetensors` | 1.2 GB |
+| `models/text_encoders` | `qwen3.5_9b_w4a8_gptq.safetensors`, only for the Prompt Expander | 7.3 GB |
+
+**Examples:**
+
+| Workflow | Purpose |
+|---|---|
+| `MiniMax-H3-Image_T2I_Low_RAM.json` | Text to image. The Prompt Expander is on |
+| `MiniMax-H3-Image_Edit_Low_RAM.json` | Edit one picture. The Prompt Expander is off, so faces, hair and text stay as you wrote them |
+| `MiniMax-H3-Image_Edit_Two_Pictures_Low_RAM.json` | Edit with a second reference picture (`<Picture 1>` and `<Picture 2>`) |
+
+**Measured** on one machine (RTX 3090 24 GB, 32 GB RAM, w4a8 model, 6 steps, cfg 1):
+
+- 4096x4096: 46 s, about 18 GB of VRAM
+- 21 MP: 62 s
+- 4 MP: about 20 s
+- text encoding of a new prompt: about 7.5 s; an unchanged prompt is not encoded again
+
+Treat these as one tested configuration, not a promise for other hardware.
+
+**Prompt Expander (experimental).** It turns a short idea in any language into the
+long English description the model wants. Its instruction text belongs to Comfy-Org
+and is not part of this pack: the node reads it at run time from the official
+MiniMax-H3-Image template installed with ComfyUI (the `comfyui-workflow-templates`
+package that ComfyUI `0.45.0` installs). If that template cannot be found, the
+node says so in its report and passes your prompt through unchanged; nothing loads.
+Expansion can change faces, hair and text on a picture, so it is off in the edit
+examples.
+
+**GGUF text encoders (experimental, unverified).** With ComfyUI-GGUF `6ea2651`
+the stock load path copied a 14.6 GB `Q4_K_M` file into host RAM on a 32 GB PC and
+was stopped. Image Encode (Low RAM) loads `.gguf` files straight to the GPU
+instead, but that path is unverified. The INT8 `.safetensors` encoder is
+recommended.
+
 ## Install
 
-MiniMax-H3 support requires ComfyUI `0.30.0` or later.
+MiniMax-H3 video support requires ComfyUI `0.30.0` or later. The H3-Image nodes
+require `0.45.0` or later.
 
 Install `MiniMax-H3 Tools` from ComfyUI Manager, or use Comfy CLI:
 
@@ -59,8 +126,8 @@ cd ComfyUI/custom_nodes
 git clone https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools.git
 ```
 
-The eight core tools require no extra Python dependencies. The four NF4 loaders
-require BitsAndBytes in ComfyUI's Python environment:
+The eight core tools and the five H3-Image nodes require no extra Python
+dependencies. The four NF4 loaders require BitsAndBytes in ComfyUI's Python environment:
 
 ```bash
 python -m pip install "bitsandbytes>=0.50.0"
@@ -138,6 +205,30 @@ Current limits:
 - `.incomplete` and `.aria2log` download artifacts are not model files
 
 ## Nodes
+
+All 17 nodes:
+
+| Node | What it does |
+|---|---|
+| MiniMax H3 Canvas Planner | Plans canvas, frame grid, latent sizes and token count before you queue |
+| MiniMax H3 Prompt Lint | Checks a video prompt against MiniMax's documented format |
+| MiniMax H3 Split AV Latent | Splits the paired video/audio latent into two latents |
+| MiniMax H3 Join AV Latent | Rejoins video and audio latents, validating them in strict mode |
+| MiniMax H3 AV Latent Info | Reports shapes, duration and token count of an AV latent |
+| MiniMax H3 Upscale Video Latent | Resizes only the video stream by interpolation |
+| MiniMax H3 Temporal Trim | Shortens video and audio together on the frame grid |
+| MiniMax H3 Audio Reroll (Experimental) | Samples new audio against a finished video latent |
+| MiniMax H3 NF4 Model Loader (Experimental) | Loads DiffSynth's NF4 diffusion model |
+| MiniMax H3 NF4 Text Encoder Loader (Experimental) | Loads DiffSynth's NF4 Qwen3-VL encoder |
+| MiniMax H3 NF4 Video VAE Loader (Experimental) | Loads DiffSynth's NF4 video VAE |
+| MiniMax H3 NF4 Audio VAE Loader (Experimental) | Loads DiffSynth's NF4 audio VAE |
+| MiniMax H3 Image Encode (Low RAM) | Encodes a prompt and pictures, then frees the text encoder |
+| MiniMax H3 Image Prompt Expander | Experimental. Expands a short idea into a long English description |
+| MiniMax H3 Image Size | Canvas presets (aspect ratio and megapixels) and the empty image latent |
+| MiniMax H3 Save Conditioning | Saves an encoded prompt to `output/conditioning` |
+| MiniMax H3 Load Conditioning | Loads a prompt saved by Save Conditioning |
+
+The sections below describe the video and audio nodes. The H3-Image nodes are described in [H3-Image (low RAM)](#h3-image-low-ram).
 
 Canvas Planner, Prompt Lint and AV Latent Info also attach their text report to
 the job, so it is recorded with the run in the queue and history. To read it on
@@ -250,8 +341,11 @@ that is missing. Start with the first workflow; it needs no model files.
 | `MiniMax-H3_AV_Latent_Tools.json` | Exercise split, video-only resize, strict join, temporal trim, and latent inspection | No |
 | `MiniMax-H3_Audio_Reroll_Experimental.json` | Generate an original AV latent, reroll with changed sound text, then mux the original picture with new audio | Yes, `ref2va` plus the text encoder and both VAEs |
 | `MiniMax-H3_AV_Advanced.json` | Original advanced T2VA/FL2VA workflow used for the archived hardware study | Yes |
+| `MiniMax-H3-Image_T2I_Low_RAM.json` | Text to image with the low-RAM encoder and the Prompt Expander | Yes, the H3-Image models |
+| `MiniMax-H3-Image_Edit_Low_RAM.json` | Edit one picture | Yes, the H3-Image models |
+| `MiniMax-H3-Image_Edit_Two_Pictures_Low_RAM.json` | Edit one picture with a second reference picture | Yes, the H3-Image models |
 
-The three tool-focused examples are generated from
+The three tool-focused video examples are generated from
 `scripts/generate_example_workflows.py`. Their tests verify every link and
 ensure the committed JSON cannot drift from the generator.
 
@@ -288,7 +382,7 @@ BitsAndBytes CUDA round trips.
 
 | Path | Purpose |
 |---|---|
-| `*.py` | Installable ComfyUI extension and twelve nodes |
+| `*.py` | Installable ComfyUI extension and seventeen nodes |
 | `tests/` | Behavior tests |
 | `locales/` | English, Simplified Chinese and Traditional Chinese node text |
 | `example_workflows/` | Loadable planning, AV-latent, reroll, and advanced generation workflows |

@@ -1,4 +1,4 @@
-"""Import the pack the way ComfyUI does and check that all twelve nodes register."""
+"""Import the pack the way ComfyUI does and check that all seventeen nodes register."""
 
 from __future__ import annotations
 
@@ -21,6 +21,11 @@ EXPECTED_NODES = frozenset(
         "MiniMaxH3XNF4TextEncoderLoader",
         "MiniMaxH3XNF4VideoVAELoader",
         "MiniMaxH3XNF4AudioVAELoader",
+        "MiniMaxH3XImagePromptExpand",
+        "MiniMaxH3XImageEncodeLowRAM",
+        "MiniMaxH3XImageSize",
+        "MiniMaxH3XSaveConditioning",
+        "MiniMaxH3XLoadConditioning",
     }
 )
 

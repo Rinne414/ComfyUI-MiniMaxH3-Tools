@@ -62,3 +62,38 @@ def test_the_readme_names_the_example_workflow_folder() -> None:
     for name in READMES:
         assert "example_workflows/" in _text(name)
         assert "`workflows/`" not in _text(name)
+
+
+def _slug(heading: str) -> str:
+    """GitHub's heading anchor: lower case, punctuation dropped, spaces to hyphens."""
+    text = re.sub(r"[^\w\s-]", "", heading.strip().lower())
+    return re.sub(r"\s", "-", text)
+
+
+@pytest.mark.parametrize("name", READMES)
+def test_in_page_links_point_at_existing_headings(name: str) -> None:
+    text = _text(name)
+    anchors = {_slug(heading) for heading in HEADING.findall(text)}
+    for target in LINK.findall(text):
+        if target.startswith("#"):
+            assert target[1:] in anchors, (name, target, sorted(anchors))
+
+
+def test_h3_image_measurements_are_identical_in_both_languages() -> None:
+    for name in READMES:
+        text = _text(name)
+        for figure in ("46", "62", "about 18 GB" if name == "README.md" else "约 18 GB", "7.5"):
+            assert figure in text, (name, figure)
+
+
+@pytest.mark.parametrize("name", READMES)
+def test_every_node_is_listed(name: str) -> None:
+    text = _text(name)
+    for node in (
+        "Canvas Planner", "Prompt Lint", "Split AV Latent", "Join AV Latent", "AV Latent Info",
+        "Upscale Video Latent", "Temporal Trim", "Audio Reroll", "NF4 Model Loader",
+        "NF4 Text Encoder Loader", "NF4 Video VAE Loader", "NF4 Audio VAE Loader",
+        "Image Encode (Low RAM)", "Image Prompt Expander", "Image Size", "Save Conditioning",
+        "Load Conditioning",
+    ):
+        assert "MiniMax H3 " + node in text, (name, node)
