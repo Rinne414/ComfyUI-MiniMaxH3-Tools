@@ -190,6 +190,11 @@ class _NF4Linear(torch.nn.Module):
     # core's CombinedLinear overwrites it on its members, and never combines a layer
     # that is not a MixedPrecisionOp.
     _combined_linear = None
+    # Core's fused helpers (comfy.ops.linear_input_act, used by the H3 VAE, DiT MLP
+    # and text encoder) read linear.weight as a dense matrix on some paths, such as
+    # --fast fp16_accumulation with fp16 activations. True makes them call forward,
+    # the only code that understands the packed NF4 codes.
+    comfy_force_forward = True
 
     def __init__(
         self,
