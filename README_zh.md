@@ -6,7 +6,7 @@
 
 **安装：**在 ComfyUI Manager 中搜索 `MiniMax-H3 Tools`（或运行 `comfy node install minimax-h3-tools`），然后重启 ComfyUI。视频工具需要 ComfyUI `0.30.0` 或更高版本，图像节点需要 `0.45.0` 或更高版本，见[安装](#安装)。
 
-**从这里开始：**打开 ComfyUI 的“模板”浏览器，在本插件的条目中选择一个示例（浏览器以安装文件夹命名该条目：通过注册表安装是 `minimax-h3-tools`，用 git clone 安装是 `ComfyUI-MiniMaxH3-Tools`）。想做图像，请打开 `MiniMax-H3-Image_T2I_Low_RAM`；它需要 [H3-Image](#h3-image低内存) 中列出的模型文件，ComfyUI 会提示下载。想先试试视频工具，请打开 `MiniMax-H3_Planning_and_Prompt_Lint`，它不需要任何模型文件。所有示例也都是 [`example_workflows/`](example_workflows/) 里的普通 `.json` 文件，可以直接拖进编辑器。
+**从这里开始：**打开 ComfyUI 的“模板”浏览器，在本插件的条目中选择一个示例（浏览器以安装文件夹命名该条目：通过注册表安装是 `minimax-h3-tools`，用 git clone 安装是 `ComfyUI-MiniMaxH3-Tools`）。想做图像，请打开 `MiniMax-H3-Image_T2I_Low_RAM`；它需要 [H3-Image](#h3-image低内存) 中列出的模型文件；示例带有这些文件的下载链接。想先试试视频工具，请打开 `MiniMax-H3_Planning_and_Prompt_Lint`，它不需要任何模型文件。所有示例也都是 [`example_workflows/`](example_workflows/) 里的普通 `.json` 文件，可以直接拖进编辑器。
 
 **完全在本地运行。**这些节点不发起任何网络请求，也不会向外发送任何内容。模型文件由你自己下载，或者在示例工作流里缺少模型时，点击 ComfyUI 显示的下载链接，由 ComfyUI 下载。
 
@@ -110,7 +110,9 @@ MiniMax 发布基础 H3 模型。DiffSynth-Studio 发布预先量化的 BitsAndB
 
 原生 H3 工作流的其余部分保持不变。在四个 NF4 加载节点中选择下载好的文件，然后把它们的 `MODEL`、`CLIP` 和 `VAE` 输出接到原来标准加载节点所连接的位置。
 
-#### NF4 还是 INT8？
+#### NF4 还是 INT8？（在较旧的核心上测得）
+
+下表于 2026 年 8 月在 ComfyUI 0.30.0 上测得，没有在当前核心上重复，因此它不能说明当前核心上的速度或质量；见[已知限制](#已知限制)。
 
 NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁盘占用。但计算时仍需把权重反量化，所以体积更小并不自动意味着更快或质量更好。下面的标准对比使用 Comfy-Org 优化过的 `int8_convrot` DiT 和文本编码器，并搭配它的 FP16/FP32 VAE；这不是与通用 INT8 的对比。
 
@@ -121,15 +123,35 @@ NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁�
 
 在这台机器上，NF4 少占约 36% 的磁盘空间，但耗时多约 32%。这些耗时只代表一种测试配置，不是与硬件无关的基准。
 
-#### 验证与限制
+#### 验证
 
 加载节点会还原序列化的 `bitsandbytes__nf4` 量化状态、Linear 的逻辑形状，以及 DiffSynth 按注意力头交错排列的 DiT QKV 布局。遇到 FP4、缺少量化附带数据、非 H3 模型、CUDA 不可用或文件不完整时，会明确报错。
 
-验证内容包括：真实的 BitsAndBytes 预量化往返、ComfyUI 的模型 patcher 与卸载生命周期，以及在 RTX 3090、BitsAndBytes 0.50.0 上的 CUDA 矩阵乘法。完整的 34.4 GB NF4 组合在 20 步的 ComfyUI 工作流中生成了与提示词相符的 864x480、124 帧视频，输出为 24 fps H.264 视频、同步的 32 kHz 立体声 AAC，以及单独的 5.175 秒立体声 FLAC。独立组件测试也验证了 NF4 Qwen3-VL 编码器和两个 VAE。
+在 ComfyUI 0.30.0（2026 年 8 月）上，验证内容包括：真实的 BitsAndBytes 预量化往返、ComfyUI 的模型 patcher 与卸载生命周期，以及在 RTX 3090、BitsAndBytes 0.50.0 上的 CUDA 矩阵乘法。完整的 34.4 GB NF4 组合在 20 步的 ComfyUI 工作流中生成了与提示词相符的 864x480、124 帧视频，输出为 24 fps H.264 视频、同步的 32 kHz 立体声 AAC，以及单独的 5.175 秒立体声 FLAC。独立组件测试也验证了 NF4 Qwen3-VL 编码器和两个 VAE。
 
-当前限制：
+#### 在当前核心上验证过的内容
 
-- 只有 NF4 FL2VA 扩散模型完成了端到端验证；现有的 NF4 Ref2VA 文件尚未声明为受支持
+在真实模型上检查，机器为 RTX 3090 和 32 GB 内存，ComfyUI 版本为 commit `ede4e5fe8`：
+
+- NF4 文本编码器：一次编码耗时 7.0 秒，内存常驻峰值约 2.1 GB，显存峰值 14.6 GB。0.2.0 的修复之前，同样的编码会让 13.3 GB 常驻内存。
+- NF4 模型上的 LoRA 会在采样器处停下，并给出明确的提示（动态显存路径）。
+- NF4 扩散模型可以加载，并能到达采样开始，不再出现之前的 `_combined_linear` `AttributeError`。
+- `tests/test_nf4_cuda.py` 在 GPU 上 5 项全部通过。
+- 在 ComfyUI 前端中，画布上会显示“实验性”标记，“模板”浏览器会列出本插件的模板，缺少模型的对话框会为 `MiniMax-H3_AV_Advanced` 提供下载按钮。
+
+#### 已知限制
+
+以下内容在当前核心上尚未验证：
+
+- NF4 扩散模型：在 32 GB 内存上，采样开始后约 4 秒内，它的常驻内存从 2.2 GB 升到 10.6 GB，测试的安全线随即中止了运行。没有任何一步完成，所以速度和峰值内存未知。
+- NF4 视频 VAE：加载时常驻内存升到 10 GB，测试在任何解码之前就被中止。用它解码未经验证。
+- 旧式（非动态）patcher 路径上的 LoRA 提示未经验证。
+
+因此，NF4 扩散模型和 NF4 视频 VAE 加载节点仍是实验性的，上面的表格不是当前的基准。
+
+另外：
+
+- 现有的 NF4 Ref2VA 文件尚未声明为受支持
 - 不支持对 NF4 Linear 层应用 LoRA 补丁
 - 已测试的运行环境是 NVIDIA CUDA；其他 GPU 和 BitsAndBytes 版本未经验证
 - `.incomplete` 和 `.aria2log` 是下载中间文件，不是模型文件
@@ -230,7 +252,7 @@ NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁�
 
 ## 示例工作流
 
-`example_workflows/` 下的文件会出现在 ComfyUI 的“模板”浏览器中，位于本插件的条目里（以安装文件夹命名：`minimax-h3-tools` 或 `ComfyUI-MiniMaxH3-Tools`），也可以直接拖进编辑器。其中的加载节点带有 Comfy-Org 标准 INT8 文件（Hugging Face 上的 `Comfy-Org/MiniMax-H3`）的下载链接，缺少模型时 ComfyUI 会提示下载。请先从第一个工作流开始，它不需要任何模型文件。
+`example_workflows/` 下的文件会出现在 ComfyUI 的“模板”浏览器中，位于本插件的条目里（以安装文件夹命名：`minimax-h3-tools` 或 `ComfyUI-MiniMaxH3-Tools`），也可以直接拖进编辑器。其中的加载节点带有 Comfy-Org 标准 INT8 文件（Hugging Face 上的 `Comfy-Org/MiniMax-H3`）的下载链接，缺少模型时 ComfyUI 可以提示下载（已在 `MiniMax-H3_AV_Advanced` 的缺少模型对话框中确认）。请先从第一个工作流开始，它不需要任何模型文件。
 
 | 工作流 | 用途 | 是否需要模型 |
 |---|---|---|
@@ -267,6 +289,13 @@ python -m pytest custom_nodes/ComfyUI-MiniMaxH3-Tools/tests -q
 ```
 
 测试覆盖精确的画布/帧数计算、严格的校准配置验证、逐位一致的 Split/Join 往返、流不匹配时的失败、空间与时间的隔离、MiniMax 公布的提示词示例、NF4 量化状态解析、按注意力头交错的 QKV 注意力，以及可选的真实 BitsAndBytes CUDA 往返。
+
+CUDA 测试（`tests/test_nf4_cuda.py`）除了 ComfyUI 文件夹，还需要把本插件文件夹放进 `PYTHONPATH`：
+
+```bash
+cd ComfyUI
+PYTHONPATH=.:custom_nodes/ComfyUI-MiniMaxH3-Tools python -m pytest custom_nodes/ComfyUI-MiniMaxH3-Tools/tests/test_nf4_cuda.py -q
+```
 
 ## 仓库结构
 

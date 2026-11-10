@@ -83,17 +83,50 @@ examples and a Chinese README.
   ComfyUI's dynamic VRAM prefetches the next block.
 - The NF4 loaders no longer write a fresh copy of every weight back into system
   RAM on each run. Weights now reach the GPU through ComfyUI's own loading path,
-  as core models' weights do.
+  as core models' weights do. Measured on the NF4 text encoder: 13.3 GB resident
+  before, about 2.1 GB after. The NF4 diffusion model and video VAE are not
+  confirmed; see Known limits.
 - Torch Compile, hook and multi-GPU nodes can rebuild an NF4 model or text
   encoder instead of failing with
   `unexpected keyword argument 'disable_dynamic'`.
 - A LoRA on an NF4 model now stops the run with a message that says what to do.
-  Under dynamic VRAM it used to be ignored without a word.
-- The NF4 video VAE works with `--fast fp16_accumulation`.
+  Under dynamic VRAM it used to be ignored without a word. Verified on the
+  dynamic VRAM path only.
+- The NF4 video VAE no longer fails with `--fast fp16_accumulation` (checked by
+  tests only; no decode was run, see Known limits).
 - Split AV Latent, Join AV Latent, Temporal Trim and Upscale Video Latent keep a
   latent's noise mask instead of dropping it. Split gives each stream its own
   mask, Join puts them back together, and Temporal Trim cuts the mask to the
   kept duration.
+
+### Verified on real models
+
+RTX 3090, 32 GB of RAM, ComfyUI at commit `ede4e5fe8`:
+
+- NF4 text encoder: one encode took 7.0 s, with about 2.1 GB of RAM resident at
+  the peak and 14.6 GB of VRAM at the peak.
+- A LoRA on an NF4 model stops at the sampler with a plain message (dynamic VRAM
+  path).
+- The NF4 diffusion model loads and reaches the start of sampling without the
+  `_combined_linear` `AttributeError`.
+- `tests/test_nf4_cuda.py` passes 5 of 5 on the GPU. It needs the pack folder on
+  `PYTHONPATH`.
+- In the ComfyUI frontend the experimental badge shows on the canvas, the
+  Templates browser lists the pack's templates, and the missing-model dialog
+  offers Download buttons for `MiniMax-H3_AV_Advanced`.
+
+### Known limits
+
+- NF4 diffusion model: on 32 GB of RAM its resident memory rose from 2.2 GB to
+  10.6 GB within about 4 s of the start of sampling, and the test's safety limit
+  stopped the run. No step completed, so speed and peak RAM on the current core
+  are unknown.
+- NF4 video VAE: resident memory rose to 10 GB during loading, and the test was
+  stopped before any decode.
+- The LoRA message on the legacy (non-dynamic) patcher path is unverified.
+- The NF4 diffusion model and video VAE loaders stay experimental. The NF4 versus
+  INT8 table in the README was measured on ComfyUI 0.30.0 in August 2026 and is
+  labelled as such.
 
 ## [0.1.0] - 2026-08-04
 

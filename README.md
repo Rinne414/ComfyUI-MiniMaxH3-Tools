@@ -17,7 +17,7 @@ ComfyUI `0.30.0` or later and the image nodes need `0.45.0` or later; see
 pack's entry (the browser names it after the install folder: `minimax-h3-tools`
 for a registry install, `ComfyUI-MiniMaxH3-Tools` for a git clone). For images,
 open `MiniMax-H3-Image_T2I_Low_RAM`; it needs the model files listed in
-[H3-Image](#h3-image-low-ram) and ComfyUI offers to download them. To try the
+[H3-Image](#h3-image-low-ram); the examples carry download links for them. To try the
 video tools first, open `MiniMax-H3_Planning_and_Prompt_Lint`, which needs no
 model files. Every example is also a plain `.json` file in
 [`example_workflows/`](example_workflows/) that you can drag into the editor.
@@ -164,7 +164,11 @@ Keep the rest of the native H3 workflow unchanged. Select the downloaded files
 in the four NF4 loaders, then connect their `MODEL`, `CLIP`, and `VAE` outputs
 where the standard loaders were connected.
 
-#### NF4 or INT8?
+#### NF4 or INT8? (measured on an older core)
+
+The table below was measured in August 2026 on ComfyUI 0.30.0. It has not been
+repeated on the current core, so it says nothing about speed or quality there;
+see [Known limits](#known-limits).
 
 NF4 stores quantized Linear weights in 4 bits, so it reduces download and disk
 footprint. It still dequantizes weights for computation, so smaller does not
@@ -181,24 +185,54 @@ On this machine NF4 used about 36% less disk space but took about 32% longer.
 Treat these timings as one tested configuration, not a hardware-independent
 benchmark.
 
-#### Validation and limits
+#### Validation
 
 The loaders restore the serialized `bitsandbytes__nf4` quantization state,
 logical Linear shapes, and DiffSynth's head-interleaved DiT QKV layout. They
 fail explicitly on FP4, missing quantization sidecars, non-H3 models,
 unavailable CUDA, or incomplete files.
 
-Validation covers real BitsAndBytes pre-quantized round trips, ComfyUI's model
+On ComfyUI 0.30.0 (August 2026), validation covered real BitsAndBytes pre-quantized round trips, ComfyUI's model
 patcher and offload lifecycle, and CUDA matmul on an RTX 3090 with BitsAndBytes
 0.50.0. The complete 34.4 GB NF4 stack generated a prompt-aligned 864x480,
 124-frame video in a 20-step ComfyUI workflow, with 24 fps H.264 video,
 synchronized 32 kHz stereo AAC, and a separate 5.175-second stereo FLAC.
 Component-isolation runs also verified the NF4 Qwen3-VL encoder and both VAEs.
 
-Current limits:
+#### Verified on the current core
 
-- only the NF4 FL2VA diffusion model has completed end-to-end validation;
-  the available NF4 Ref2VA file is not yet claimed as supported
+Checked on real models with an RTX 3090 and 32 GB of RAM, ComfyUI at commit
+`ede4e5fe8`:
+
+- NF4 text encoder: one encode took 7.0 s, with about 2.1 GB of RAM resident at
+  the peak and 14.6 GB of VRAM at the peak. Before the fixes in 0.2.0 the same
+  encode left 13.3 GB resident.
+- A LoRA on an NF4 model stops the run at the sampler with a plain message (the
+  dynamic VRAM path).
+- The NF4 diffusion model loads and reaches the start of sampling without the
+  earlier `_combined_linear` `AttributeError`.
+- `tests/test_nf4_cuda.py` passes 5 of 5 on the GPU.
+- In the ComfyUI frontend the experimental badge shows on the canvas, the
+  Templates browser lists this pack's templates, and the missing-model dialog
+  offers Download buttons for `MiniMax-H3_AV_Advanced`.
+
+#### Known limits
+
+Not verified on the current core:
+
+- NF4 diffusion model: on 32 GB of RAM its resident memory rose from 2.2 GB to
+  10.6 GB within about 4 s of the start of sampling, and the test's safety limit
+  stopped the run. No step completed, so speed and peak RAM are unknown.
+- NF4 video VAE: resident memory rose to 10 GB while loading, and the test was
+  stopped before any decode. Decoding with it is unverified.
+- The LoRA message on the legacy (non-dynamic) patcher path is unverified.
+
+Because of this, the NF4 diffusion model and NF4 video VAE loaders stay
+experimental, and the table above is not a current benchmark.
+
+Also:
+
+- the available NF4 Ref2VA file is not claimed as supported
 - LoRA patches on NF4 Linear layers are not supported
 - the tested runtime is NVIDIA CUDA; other GPUs and BitsAndBytes versions are
   unverified
@@ -332,8 +366,8 @@ The files under `example_workflows/` appear in ComfyUI's Templates browser, in
 this pack's entry (named after the install folder, `minimax-h3-tools` or
 `ComfyUI-MiniMaxH3-Tools`), and can also be dragged directly into the editor. The
 loader nodes in them carry download links for the standard Comfy-Org INT8 files
-(`Comfy-Org/MiniMax-H3` on Hugging Face), so ComfyUI offers to download a model
-that is missing. Start with the first workflow; it needs no model files.
+(`Comfy-Org/MiniMax-H3` on Hugging Face), so ComfyUI can offer to download a model
+that is missing (checked in the missing-model dialog for `MiniMax-H3_AV_Advanced`). Start with the first workflow; it needs no model files.
 
 | Workflow | Purpose | Model required |
 |---|---|---|
@@ -377,6 +411,14 @@ validation, bit-identical Split/Join round trips, stream mismatch failures,
 spatial and temporal isolation, MiniMax's published prompt examples, NF4
 quant-state parsing, head-interleaved QKV attention, and optional real
 BitsAndBytes CUDA round trips.
+
+The CUDA tests (`tests/test_nf4_cuda.py`) need the pack folder on `PYTHONPATH` as
+well as the ComfyUI folder:
+
+```bash
+cd ComfyUI
+PYTHONPATH=.:custom_nodes/ComfyUI-MiniMaxH3-Tools python -m pytest custom_nodes/ComfyUI-MiniMaxH3-Tools/tests/test_nf4_cuda.py -q
+```
 
 ## Repository layout
 
