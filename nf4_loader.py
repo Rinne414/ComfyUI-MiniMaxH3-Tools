@@ -586,16 +586,10 @@ def _normalized_diffusion_state_dict(
     }
 
 
-def load_nf4_diffusion_model(path: str):
-    _require_bitsandbytes()
+def _minimax_h3_config(path, state_dict, metadata):
     import comfy.model_detection
-    import comfy.model_management
-    import comfy.model_patcher
 
-    raw_state_dict, metadata = _load_state_dict(path)
-    state_dict = _normalized_diffusion_state_dict(raw_state_dict)
-    shapes = nf4_quantized_shapes(state_dict)
-    probe = make_shape_probe(state_dict, shapes)
+    probe = make_shape_probe(state_dict, nf4_quantized_shapes(state_dict))
     model_config = comfy.model_detection.model_config_from_unet(
         probe, "", metadata=metadata
     )
@@ -608,6 +602,17 @@ def load_nf4_diffusion_model(path: str):
             f"NF4 checkpoint '{path}' is not a detectable MiniMax H3 diffusion model; "
             f"detected config={detected}"
         )
+    return model_config
+
+
+def load_nf4_diffusion_model(path: str, disable_dynamic: bool = False):
+    _require_bitsandbytes()
+    import comfy.model_management
+    import comfy.model_patcher
+
+    raw_state_dict, metadata = _load_state_dict(path)
+    state_dict = _normalized_diffusion_state_dict(raw_state_dict)
+    model_config = _minimax_h3_config(path, state_dict, metadata)
 
     load_device = comfy.model_management.get_torch_device()
     offload_device = comfy.model_management.unet_offload_device()
@@ -615,7 +620,14 @@ def load_nf4_diffusion_model(path: str):
     model_config.set_inference_dtype(torch.bfloat16, None, device=load_device)
     model = model_config.get_model(dict(state_dict), "")
     replaced = _replace_nf4_dit_attentions(model.diffusion_model)
-    patcher = comfy.model_patcher.CoreModelPatcher(
+    # Core asks for a non-dynamic rebuild (TorchCompile, hooks, multi-GPU) through
+    # cached_patcher_init; cores without dynamic VRAM never pass the argument.
+    patcher_class = (
+        comfy.model_patcher.ModelPatcher
+        if disable_dynamic
+        else comfy.model_patcher.CoreModelPatcher
+    )
+    patcher = patcher_class(
         model, load_device=load_device, offload_device=offload_device
     )
     if not comfy.model_management.is_device_cpu(offload_device):
@@ -629,7 +641,7 @@ def load_nf4_diffusion_model(path: str):
     return patcher
 
 
-def load_nf4_text_encoder(path: str):
+def load_nf4_text_encoder(path: str, disable_dynamic: bool = False):
     _require_bitsandbytes()
     import comfy.sd
     import folder_paths
@@ -637,18 +649,22 @@ def load_nf4_text_encoder(path: str):
     raw_state_dict, _ = _load_state_dict(path)
     state_dict = convert_minimax_text_encoder_state_dict(raw_state_dict)
     nf4_quantized_shapes(state_dict)
+    # Passed only when set: cores without dynamic VRAM do not take the argument
+    # and never ask for it.
+    dynamic_options = {"disable_dynamic": True} if disable_dynamic else {}
     clip = comfy.sd.load_text_encoder_state_dicts(
         [state_dict],
         embedding_directory=folder_paths.get_folder_paths("embeddings"),
         clip_type=comfy.sd.CLIPType.MINIMAX,
         model_options={"custom_operations": _nf4_operations()},
+        **dynamic_options,
     )
     clip.patcher.cached_patcher_init = (load_nf4_text_encoder_patcher, (path,))
     return clip
 
 
-def load_nf4_text_encoder_patcher(path: str):
-    return load_nf4_text_encoder(path).patcher
+def load_nf4_text_encoder_patcher(path: str, disable_dynamic: bool = False):
+    return load_nf4_text_encoder(path, disable_dynamic).patcher
 
 
 def _replace_quantized_linears(
@@ -749,7 +765,10 @@ def load_nf4_video_vae(path: str):
     return vae
 
 
-def load_nf4_video_vae_patcher(path: str):
+def load_nf4_video_vae_patcher(path: str, disable_dynamic: bool = False):
+    # As in core's load_vae_patcher, the VAE picks its own patcher; clone() then
+    # builds the non-dynamic patcher around the fresh model returned here.
+    del disable_dynamic
     return load_nf4_video_vae(path).patcher
 
 
@@ -766,7 +785,8 @@ def load_nf4_audio_vae(path: str):
     return vae
 
 
-def load_nf4_audio_vae_patcher(path: str):
+def load_nf4_audio_vae_patcher(path: str, disable_dynamic: bool = False):
+    del disable_dynamic  # see load_nf4_video_vae_patcher
     return load_nf4_audio_vae(path).patcher
 
 
