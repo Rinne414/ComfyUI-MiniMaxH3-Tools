@@ -105,7 +105,7 @@ def test_importing_the_pack_survives_a_failing_probe(
 
     monkeypatch.setattr(importlib.metadata, "version", explode)
     module = load_extension(Path(__file__).resolve().parents[1])
-    assert len(module.NODES) == 12
+    assert len(module.NODES) == 17
 
 
 def test_importing_the_pack_logs_the_status(caplog: pytest.LogCaptureFixture) -> None:
@@ -115,3 +115,18 @@ def test_importing_the_pack_logs_the_status(caplog: pytest.LogCaptureFixture) ->
         load_extension(Path(__file__).resolve().parents[1])
     messages = [record.getMessage() for record in caplog.records]
     assert any(m.startswith("MiniMax-H3 Tools: NF4 loaders: ") for m in messages)
+
+
+def test_the_pack_without_native_image_support_still_registers_the_other_twelve_nodes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """On a ComfyUI older than 0.45.0 the image modules fail to import; nothing else may break."""
+    from scripts.smoke_registration import load_extension
+
+    for module in list(sys.modules):
+        if module.startswith("comfyui_minimaxh3_tools"):
+            monkeypatch.delitem(sys.modules, module)
+    monkeypatch.setitem(sys.modules, "comfyui_minimaxh3_tools.image_encode", None)
+    module = load_extension(Path(__file__).resolve().parents[1])
+    assert len(module.NODES) == 12
+    assert not any(node.__name__.startswith("MiniMaxH3XImage") for node in module.NODES)
