@@ -8,7 +8,13 @@ from typing import cast
 
 import pytest
 
-from scripts.generate_example_workflows import Workflow, WorkflowNode, build_workflows
+from scripts.generate_example_workflows import (
+    MODEL_DIRECTORIES,
+    MODEL_REPOSITORY_URL,
+    Workflow,
+    WorkflowNode,
+    build_workflows,
+)
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_DIRECTORY = REPOSITORY_ROOT / "example_workflows"
@@ -219,7 +225,20 @@ def test_workflow_titles_and_notes_are_bilingual(path: Path) -> None:
 
 
 LOADER_TYPES = {"UNETLoader", "CLIPLoader", "VAELoader"}
-MODEL_URL_PREFIX = "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/"
+
+# Verified against the Comfy-Org/MiniMax-H3 file listing on Hugging Face.
+VERIFIED_MODEL_FOLDERS = {
+    "minimax_h3_fl2va_pruned_int8_convrot.safetensors": "diffusion_models",
+    "minimax_h3_ref2va_pruned_int8_convrot.safetensors": "diffusion_models",
+    "qwen3vl_32b_minimax_h3_int8_convrot.safetensors": "text_encoders",
+    "minimax_h3_video_vae_fp16.safetensors": "vae",
+    "minimax_h3_audio_vae_fp32.safetensors": "vae",
+}
+
+
+def test_model_folders_match_the_verified_huggingface_layout() -> None:
+    assert MODEL_DIRECTORIES == VERIFIED_MODEL_FOLDERS
+    assert MODEL_REPOSITORY_URL == "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main"
 
 
 @pytest.mark.parametrize(
@@ -232,15 +251,38 @@ def test_loader_nodes_carry_a_verified_download_link(path: Path) -> None:
     loaders = [node for node in workflow["nodes"] if node["type"] in LOADER_TYPES]
     for node in loaders:
         file_name = node["widgets_values"][0]
-        models = node["properties"]["models"]
-        assert models == [
+        assert file_name in MODEL_DIRECTORIES, "%s uses an unverified model file" % file_name
+        directory = MODEL_DIRECTORIES[file_name]
+        assert node["properties"]["models"] == [
             {
                 "name": file_name,
-                "url": "%s%s/%s" % (MODEL_URL_PREFIX, models[0]["directory"], file_name),
-                "directory": models[0]["directory"],
+                "url": "%s/%s/%s" % (MODEL_REPOSITORY_URL, directory, file_name),
+                "directory": directory,
             }
         ]
-        assert models[0]["directory"] in {"diffusion_models", "text_encoders", "vae"}
+
+
+def test_the_research_generator_keeps_the_download_links() -> None:
+    """Re-running research/gen_h3_workflow.py must not strip them from AV_Advanced."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "gen_h3_workflow", REPOSITORY_ROOT / "research" / "gen_h3_workflow.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    nodes = module.build()[0]
+    generated = {
+        node["id"]: node["properties"].get("models")
+        for node in nodes if node["type"] in LOADER_TYPES
+    }
+    committed = {
+        node["id"]: node["properties"].get("models")
+        for node in _load_workflow(WORKFLOW_DIRECTORY / "MiniMax-H3_AV_Advanced.json")["nodes"]
+        if node["type"] in LOADER_TYPES
+    }
+    assert generated and all(generated.values())
+    assert generated == committed
 
 
 def test_example_workflows_are_a_single_flat_folder() -> None:

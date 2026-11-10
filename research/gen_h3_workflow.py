@@ -5,9 +5,13 @@ semantics also validates the graph the user loads in the browser.
 """
 import json
 import os
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPOSITORY_ROOT = os.path.dirname(HERE)
+sys.path.insert(0, REPOSITORY_ROOT)
+
+from scripts.generate_example_workflows import model_download_properties  # noqa: E402
 
 # ---------------------------------------------------------------- slot tables
 # (input_name, type) / (output_name, type) per node class, in schema order.
@@ -241,6 +245,9 @@ def build():
             "properties": {"Node name for S&R": cls},
             "widgets_values": widgets,
         }
+        models = model_download_properties(cls, tuple(widgets))
+        if models:
+            d["properties"]["models"] = models
         if title:
             d["title"] = title
         N.append(d)
