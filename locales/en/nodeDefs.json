@@ -1,0 +1,311 @@
+{
+  "MiniMaxH3XCanvasSolver": {
+    "display_name": "MiniMax H3 Canvas Planner",
+    "description": "Resolve the exact canvas, frame grid, latent sizes and token count before queueing. Runtime estimates are disabled unless an explicit hardware profile is selected.",
+    "inputs": {
+      "aspect_ratio": {
+        "name": "aspect_ratio",
+        "tooltip": "Shape of the canvas. Width and height snap to multiples of 32."
+      },
+      "megapixels": {
+        "name": "megapixels",
+        "tooltip": "Target area using ComfyUI's 1024*1024 megapixel unit."
+      },
+      "seconds": {
+        "name": "seconds",
+        "tooltip": "Duration at 24 fps, snapped up to H3's 17k+5 frame grid."
+      },
+      "steps": {
+        "name": "steps",
+        "tooltip": "Used only when a hardware cost profile is selected."
+      },
+      "cost_profile": {
+        "name": "cost_profile",
+        "tooltip": "No runtime estimate is made by default. Profiles are machine-specific and must be selected explicitly."
+      },
+      "vram_budget_gib": {
+        "name": "vram_budget_gib",
+        "tooltip": "Compared only with thresholds from the selected profile."
+      },
+      "clamp_to_trained_cap": {
+        "name": "clamp_to_trained_cap",
+        "tooltip": "Off reports the canvas ComfyUI will actually create. On shrinks over-cap requests to H3's documented trained area."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "width"
+      },
+      "1": {
+        "name": "height"
+      },
+      "2": {
+        "name": "frames"
+      },
+      "3": {
+        "name": "latent_t"
+      },
+      "4": {
+        "name": "audio_t"
+      },
+      "5": {
+        "name": "video_tokens"
+      },
+      "6": {
+        "name": "est_sit_seconds"
+      },
+      "7": {
+        "name": "est_total_minutes"
+      },
+      "8": {
+        "name": "report"
+      }
+    }
+  },
+  "MiniMaxH3XSplitAV": {
+    "display_name": "MiniMax H3 Split AV Latent",
+    "description": "Split an H3 AV latent into separate video and audio latents.",
+    "inputs": {
+      "latent": {
+        "name": "latent"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "video"
+      },
+      "1": {
+        "name": "audio"
+      }
+    }
+  },
+  "MiniMaxH3XJoinAV": {
+    "display_name": "MiniMax H3 Join AV Latent",
+    "description": "Recombine video and audio latents into an H3 AV latent. Validates that both streams describe the same frame count.",
+    "inputs": {
+      "video": {
+        "name": "video"
+      },
+      "audio": {
+        "name": "audio"
+      },
+      "strict": {
+        "name": "strict",
+        "tooltip": "Reject streams whose latent_t and audio_t disagree, or whose latent_t is off the 17k+5 grid. Turn off only when deliberately building an irregular pair."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "LATENT"
+      }
+    }
+  },
+  "MiniMaxH3XLatentInfo": {
+    "display_name": "MiniMax H3 AV Latent Info",
+    "description": "Report both stream shapes, implied duration and token count.",
+    "inputs": {
+      "latent": {
+        "name": "latent"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "report"
+      },
+      "1": {
+        "name": "frames"
+      },
+      "2": {
+        "name": "video_tokens"
+      }
+    }
+  },
+  "MiniMaxH3XUpscaleVideoLatent": {
+    "display_name": "MiniMax H3 Upscale Video Latent",
+    "description": "Resize the video stream of an H3 AV latent, leaving audio alone. Target pixel dimensions snap to multiples of 32.",
+    "inputs": {
+      "latent": {
+        "name": "latent"
+      },
+      "width": {
+        "name": "width",
+        "tooltip": "Target pixel width; divided by 16 for the latent grid."
+      },
+      "height": {
+        "name": "height",
+        "tooltip": "Target pixel height; divided by 16 for the latent grid."
+      },
+      "upscale_method": {
+        "name": "upscale_method",
+        "tooltip": "Interpolation used to resize every video frame."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "LATENT"
+      }
+    }
+  },
+  "MiniMaxH3XTemporalTrim": {
+    "display_name": "MiniMax H3 Temporal Trim",
+    "description": "Shorten an H3 AV latent, keeping video and audio coherent. The result is snapped to the model's 17k+5 frame grid.",
+    "inputs": {
+      "latent": {
+        "name": "latent"
+      },
+      "keep_seconds": {
+        "name": "keep_seconds",
+        "tooltip": "Duration to keep from the start, aligned to the frame grid."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "LATENT"
+      },
+      "1": {
+        "name": "frames"
+      }
+    }
+  },
+  "MiniMaxH3XPromptLint": {
+    "display_name": "MiniMax H3 Prompt Lint",
+    "description": "Check an H3 prompt against MiniMax's documented format rules. Deterministic -- no LLM, no rewriting. Passes the prompt through unchanged so it can sit inline in a workflow.",
+    "inputs": {
+      "prompt": {
+        "name": "prompt",
+        "tooltip": "The H3 prompt to check. It is passed through unchanged."
+      },
+      "mode": {
+        "name": "mode",
+        "tooltip": "t2va/fl2va expect the three base fields; ref2va expects the six full-reference fields."
+      },
+      "duration_seconds": {
+        "name": "duration_seconds",
+        "tooltip": "Clip duration, used to flag cut times past the end. 0 disables that check."
+      },
+      "ref_images": {
+        "name": "ref_images",
+        "tooltip": "How many reference images are connected, so <Picture N> beyond that can be flagged."
+      },
+      "ref_videos": {
+        "name": "ref_videos",
+        "tooltip": "How many reference videos are connected, so <Video N> beyond that can be flagged."
+      },
+      "ref_audios": {
+        "name": "ref_audios",
+        "tooltip": "How many reference audios are connected, so <Audio N> beyond that can be flagged."
+      },
+      "raise_on_warning": {
+        "name": "raise_on_warning",
+        "tooltip": "Fail the workflow instead of passing the prompt through. Off by default so a lint warning never blocks a render."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "prompt"
+      },
+      "1": {
+        "name": "warnings"
+      },
+      "2": {
+        "name": "is_clean"
+      }
+    }
+  },
+  "MiniMaxH3XAudioReroll": {
+    "display_name": "MiniMax H3 Audio Reroll (Experimental)",
+    "description": "Experimental: condition a fresh H3 sampling run on an already-generated video latent, so a new soundtrack can be produced without re-authoring the picture. The video is strongly preserved but resampled, not frozen -- use video_passthrough downstream for a bit-identical mux.",
+    "inputs": {
+      "conditioning": {
+        "name": "conditioning",
+        "tooltip": "Conditioning from an H3 conditioning node, with the soundscape/music text changed."
+      },
+      "av_latent": {
+        "name": "av_latent",
+        "tooltip": "The AV latent from the run whose picture you want to keep."
+      },
+      "video_cond_strength": {
+        "name": "video_cond_strength",
+        "tooltip": "Noise augmentation on the video reference. 1.0 feeds it perfectly clean for maximum preservation; lower values let the picture drift. The DiT keyframe default is 0.999."
+      },
+      "reset_audio_latent": {
+        "name": "reset_audio_latent",
+        "tooltip": "Start the audio stream from zeros so the sampler writes a genuinely new track. Off reuses the old audio latent and biases the result toward the original."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "positive"
+      },
+      "1": {
+        "name": "latent"
+      },
+      "2": {
+        "name": "video_passthrough"
+      },
+      "3": {
+        "name": "info"
+      }
+    }
+  },
+  "MiniMaxH3XNF4ModelLoader": {
+    "display_name": "MiniMax H3 NF4 Model Loader",
+    "description": "Load a DiffSynth-format MiniMax H3 NF4 diffusion model with BitsAndBytes.",
+    "inputs": {
+      "model_name": {
+        "name": "model_name",
+        "tooltip": "The NF4 FL2VA diffusion model, saved as minimax-h3-fl2va-nf4.safetensors in models/diffusion_models."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "MODEL"
+      }
+    }
+  },
+  "MiniMaxH3XNF4TextEncoderLoader": {
+    "display_name": "MiniMax H3 NF4 Text Encoder Loader",
+    "description": "Load the DiffSynth-format MiniMax H3 Qwen3-VL NF4 encoder.",
+    "inputs": {
+      "encoder_name": {
+        "name": "encoder_name",
+        "tooltip": "The NF4 Qwen3-VL text encoder, saved as minimax-h3-text-encoder-nf4.safetensors in models/text_encoders."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "CLIP"
+      }
+    }
+  },
+  "MiniMaxH3XNF4VideoVAELoader": {
+    "display_name": "MiniMax H3 NF4 Video VAE Loader",
+    "description": "Load the DiffSynth-format MiniMax H3 NF4 video VAE.",
+    "inputs": {
+      "vae_name": {
+        "name": "vae_name",
+        "tooltip": "The NF4 video VAE, saved as video_vae_nf4.safetensors in models/vae."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "VAE"
+      }
+    }
+  },
+  "MiniMaxH3XNF4AudioVAELoader": {
+    "display_name": "MiniMax H3 NF4 Audio VAE Loader",
+    "description": "Load the DiffSynth-format MiniMax H3 NF4 audio VAE.",
+    "inputs": {
+      "vae_name": {
+        "name": "vae_name",
+        "tooltip": "The NF4 audio VAE, saved as audio_vae_nf4.safetensors in models/vae."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "VAE"
+      }
+    }
+  }
+}

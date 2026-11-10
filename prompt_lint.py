@@ -352,42 +352,45 @@ class MiniMaxH3XPromptLint(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="MiniMaxH3XPromptLint",
-            display_name="MiniMax H3 Prompt Lint / 提示词检查",
+            display_name="MiniMax H3 Prompt Lint",
             category="model/conditioning/minimax",
             search_aliases=[
                 "h3", "minimax", "prompt lint", "prompt check",
                 "validate prompt", "linter", "提示词检查", "提示词", "检查", "校验",
             ],
             description=(
-                "Check an H3 prompt against MiniMax's documented format rules. "
-                "Deterministic -- no LLM, no rewriting. Passes the prompt through "
-                "unchanged so it can sit inline in a workflow. / 按 MiniMax 文档规则"
-                "检查 H3 提示词；不使用 LLM、不改写，并原样传递提示词。"),
+                "Check an H3 prompt against MiniMax's documented format "
+                "rules. Deterministic -- no LLM, no rewriting. Passes the "
+                "prompt through unchanged so it can sit inline in a workflow."),
             inputs=[
-                io.String.Input("prompt", multiline=True),
+                io.String.Input("prompt", multiline=True,
+                                tooltip="The H3 prompt to check. It is passed through unchanged."),
                 io.Combo.Input("mode", options=["t2va", "fl2va", "ref2va"], default="t2va",
                                tooltip=(
-                                   "t2va/fl2va expect the three base fields; ref2va "
-                                   "expects the six full-reference fields. / t2va/fl2va "
-                                   "需要三个基础字段；ref2va 需要六个完整参考字段。")),
+                                   "t2va/fl2va expect the three base fields; "
+                                   "ref2va expects the six full-reference "
+                                   "fields.")),
                 io.Float.Input("duration_seconds", default=0.0, min=0.0, max=60.0, step=0.1,
                                tooltip=(
-                                   "Clip duration, used to flag cut times past the end. "
-                                   "0 disables that check. / 片段时长，用于标记超出结尾的"
-                                   "切镜时间；0 表示禁用此检查。")),
+                                   "Clip duration, used to flag cut times "
+                                   "past the end. 0 disables that check.")),
                 io.Int.Input("ref_images", default=0, min=0, max=9,
                              tooltip=(
                                  "How many reference images are connected, so "
-                                 "<Picture N> beyond that can be flagged. / 已连接的参考"
-                                 "图片数量，用于标记超出范围的 <Picture N>。")),
-                io.Int.Input("ref_videos", default=0, min=0, max=3),
-                io.Int.Input("ref_audios", default=0, min=0, max=3),
+                                 "<Picture N> beyond that can be flagged.")),
+                io.Int.Input("ref_videos", default=0, min=0, max=3,
+                             tooltip=(
+                                 "How many reference videos are connected, so "
+                                 "<Video N> beyond that can be flagged.")),
+                io.Int.Input("ref_audios", default=0, min=0, max=3,
+                             tooltip=(
+                                 "How many reference audios are connected, so "
+                                 "<Audio N> beyond that can be flagged.")),
                 io.Boolean.Input("raise_on_warning", default=False,
                                  tooltip=(
-                                     "Fail the workflow instead of passing the prompt "
-                                     "through. Off by default so a lint warning never "
-                                     "blocks a render. / 发现警告时让工作流失败，而不是"
-                                     "继续传递提示词；默认关闭，避免检查警告阻止渲染。")),
+                                     "Fail the workflow instead of passing "
+                                     "the prompt through. Off by default so a "
+                                     "lint warning never blocks a render.")),
             ],
             outputs=[
                 io.String.Output(display_name="prompt"),

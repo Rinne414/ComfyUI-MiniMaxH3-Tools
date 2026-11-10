@@ -1,0 +1,311 @@
+{
+  "MiniMaxH3XCanvasSolver": {
+    "display_name": "MiniMax H3 画布规划",
+    "description": "在加入队列前计算精确画布、帧网格、潜空间尺寸和令牌数；仅在明确选择硬件配置后估算运行时间。",
+    "inputs": {
+      "aspect_ratio": {
+        "name": "宽高比",
+        "tooltip": "画布的形状。宽度和高度会对齐到 32 的倍数。"
+      },
+      "megapixels": {
+        "name": "百万像素",
+        "tooltip": "使用 ComfyUI 的 1024*1024 百万像素单位设置目标面积。"
+      },
+      "seconds": {
+        "name": "时长（秒）",
+        "tooltip": "按 24 fps 设置时长，并向上对齐到 H3 的 17k+5 帧网格。"
+      },
+      "steps": {
+        "name": "步数",
+        "tooltip": "仅在选择硬件成本配置时使用。"
+      },
+      "cost_profile": {
+        "name": "成本配置",
+        "tooltip": "默认不估算运行时间；配置仅适用于特定机器，必须明确选择。"
+      },
+      "vram_budget_gib": {
+        "name": "显存预算（GiB）",
+        "tooltip": "仅与所选配置中的阈值比较。"
+      },
+      "clamp_to_trained_cap": {
+        "name": "限制到训练上限",
+        "tooltip": "关闭时报告 ComfyUI 实际创建的画布；开启时将超限请求缩小到 H3 文档中的训练面积。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "宽度"
+      },
+      "1": {
+        "name": "高度"
+      },
+      "2": {
+        "name": "帧数"
+      },
+      "3": {
+        "name": "潜空间帧数 (latent_t)"
+      },
+      "4": {
+        "name": "音频潜空间长度 (audio_t)"
+      },
+      "5": {
+        "name": "视频令牌数"
+      },
+      "6": {
+        "name": "估算单次迭代耗时（秒）"
+      },
+      "7": {
+        "name": "估算总耗时（分钟）"
+      },
+      "8": {
+        "name": "报告"
+      }
+    }
+  },
+  "MiniMaxH3XSplitAV": {
+    "display_name": "MiniMax H3 拆分音视频潜空间",
+    "description": "将 H3 音视频潜空间拆分为独立的视频和音频潜空间。",
+    "inputs": {
+      "latent": {
+        "name": "潜空间"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "视频"
+      },
+      "1": {
+        "name": "音频"
+      }
+    }
+  },
+  "MiniMaxH3XJoinAV": {
+    "display_name": "MiniMax H3 合并音视频潜空间",
+    "description": "将视频和音频潜空间重新合并为 H3 音视频潜空间，并验证两个流对应相同帧数。",
+    "inputs": {
+      "video": {
+        "name": "视频"
+      },
+      "audio": {
+        "name": "音频"
+      },
+      "strict": {
+        "name": "严格模式",
+        "tooltip": "拒绝时长不一致或不符合 17k+5 网格的流；仅在有意构建非标准组合时关闭。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "潜空间"
+      }
+    }
+  },
+  "MiniMaxH3XLatentInfo": {
+    "display_name": "MiniMax H3 音视频潜空间信息",
+    "description": "报告两个流的形状、推算时长和令牌数。",
+    "inputs": {
+      "latent": {
+        "name": "潜空间"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "报告"
+      },
+      "1": {
+        "name": "帧数"
+      },
+      "2": {
+        "name": "视频令牌数"
+      }
+    }
+  },
+  "MiniMaxH3XUpscaleVideoLatent": {
+    "display_name": "MiniMax H3 放大视频潜空间",
+    "description": "仅调整 H3 音视频潜空间中的视频尺寸，音频保持不变；目标像素尺寸对齐到 32 的倍数。",
+    "inputs": {
+      "latent": {
+        "name": "潜空间"
+      },
+      "width": {
+        "name": "宽度",
+        "tooltip": "目标像素宽度；潜空间网格宽度为该值除以 16。"
+      },
+      "height": {
+        "name": "高度",
+        "tooltip": "目标像素高度；潜空间网格高度为该值除以 16。"
+      },
+      "upscale_method": {
+        "name": "缩放方法",
+        "tooltip": "用于缩放每一帧视频的插值方法。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "潜空间"
+      }
+    }
+  },
+  "MiniMaxH3XTemporalTrim": {
+    "display_name": "MiniMax H3 时长裁剪",
+    "description": "在保持音视频同步的同时缩短 H3 潜空间，并将结果对齐到模型的 17k+5 帧网格。",
+    "inputs": {
+      "latent": {
+        "name": "潜空间"
+      },
+      "keep_seconds": {
+        "name": "保留时长（秒）",
+        "tooltip": "从开头保留的时长，并对齐到帧网格。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "潜空间"
+      },
+      "1": {
+        "name": "帧数"
+      }
+    }
+  },
+  "MiniMaxH3XPromptLint": {
+    "display_name": "MiniMax H3 提示词检查",
+    "description": "按 MiniMax 文档规则检查 H3 提示词；不使用 LLM、不改写，并原样传递提示词。",
+    "inputs": {
+      "prompt": {
+        "name": "提示词",
+        "tooltip": "要检查的 H3 提示词，会原样传递。"
+      },
+      "mode": {
+        "name": "模式",
+        "tooltip": "t2va/fl2va 需要三个基础字段；ref2va 需要六个完整参考字段。"
+      },
+      "duration_seconds": {
+        "name": "时长（秒）",
+        "tooltip": "片段时长，用于标记超出结尾的切镜时间；0 表示禁用此检查。"
+      },
+      "ref_images": {
+        "name": "参考图片数",
+        "tooltip": "已连接的参考图片数量，用于标记超出范围的 <Picture N>。"
+      },
+      "ref_videos": {
+        "name": "参考视频数",
+        "tooltip": "已连接的参考视频数量，用于标记超出范围的 <Video N>。"
+      },
+      "ref_audios": {
+        "name": "参考音频数",
+        "tooltip": "已连接的参考音频数量，用于标记超出范围的 <Audio N>。"
+      },
+      "raise_on_warning": {
+        "name": "有警告时报错",
+        "tooltip": "发现警告时让工作流失败，而不是继续传递提示词；默认关闭，避免检查警告阻止渲染。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "提示词"
+      },
+      "1": {
+        "name": "警告"
+      },
+      "2": {
+        "name": "是否通过"
+      }
+    }
+  },
+  "MiniMaxH3XAudioReroll": {
+    "display_name": "MiniMax H3 音频重生成（实验性）",
+    "description": "以已生成的视频潜空间作为参考重新采样音频；画面会被强力保留但仍会重采样。如需逐位一致的画面，请在下游使用 video_passthrough 混流。",
+    "inputs": {
+      "conditioning": {
+        "name": "条件",
+        "tooltip": "来自 H3 条件节点的条件，其中环境音或音乐文字已经修改。"
+      },
+      "av_latent": {
+        "name": "音视频潜空间",
+        "tooltip": "需要保留画面的原始运行所产生的音视频潜空间。"
+      },
+      "video_cond_strength": {
+        "name": "视频参考强度",
+        "tooltip": "视频参考的噪声增强值。1.0 表示完全干净并最大程度保留画面；较低值会允许画面变化。DiT 的关键帧默认值为 0.999。"
+      },
+      "reset_audio_latent": {
+        "name": "重置音频潜空间",
+        "tooltip": "从零开始音频流，让采样器生成全新音轨；关闭时复用旧音频潜空间，结果会偏向原音轨。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "正向条件"
+      },
+      "1": {
+        "name": "潜空间"
+      },
+      "2": {
+        "name": "原始视频潜空间"
+      },
+      "3": {
+        "name": "信息"
+      }
+    }
+  },
+  "MiniMaxH3XNF4ModelLoader": {
+    "display_name": "MiniMax H3 NF4 模型加载",
+    "description": "使用 BitsAndBytes 加载 DiffSynth 格式的 MiniMax H3 NF4 扩散模型。",
+    "inputs": {
+      "model_name": {
+        "name": "模型文件",
+        "tooltip": "NF4 FL2VA 扩散模型，文件名为 minimax-h3-fl2va-nf4.safetensors，放在 models/diffusion_models。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "模型"
+      }
+    }
+  },
+  "MiniMaxH3XNF4TextEncoderLoader": {
+    "display_name": "MiniMax H3 NF4 文本编码器加载",
+    "description": "加载 DiffSynth 格式的 MiniMax H3 Qwen3-VL NF4 编码器。",
+    "inputs": {
+      "encoder_name": {
+        "name": "编码器文件",
+        "tooltip": "NF4 Qwen3-VL 文本编码器，文件名为 minimax-h3-text-encoder-nf4.safetensors，放在 models/text_encoders。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "文本编码器"
+      }
+    }
+  },
+  "MiniMaxH3XNF4VideoVAELoader": {
+    "display_name": "MiniMax H3 NF4 视频 VAE 加载",
+    "description": "加载 DiffSynth 格式的 MiniMax H3 NF4 视频 VAE。",
+    "inputs": {
+      "vae_name": {
+        "name": "VAE 文件",
+        "tooltip": "NF4 视频 VAE，文件名为 video_vae_nf4.safetensors，放在 models/vae。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "VAE"
+      }
+    }
+  },
+  "MiniMaxH3XNF4AudioVAELoader": {
+    "display_name": "MiniMax H3 NF4 音频 VAE 加载",
+    "description": "加载 DiffSynth 格式的 MiniMax H3 NF4 音频 VAE。",
+    "inputs": {
+      "vae_name": {
+        "name": "VAE 文件",
+        "tooltip": "NF4 音频 VAE，文件名为 audio_vae_nf4.safetensors，放在 models/vae。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "VAE"
+      }
+    }
+  }
+}

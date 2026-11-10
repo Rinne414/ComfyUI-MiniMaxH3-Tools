@@ -155,7 +155,7 @@ class MiniMaxH3XCanvasSolver(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="MiniMaxH3XCanvasSolver",
-            display_name="MiniMax H3 Canvas Planner / 画布规划",
+            display_name="MiniMax H3 Canvas Planner",
             category="model/latent/minimax",
             search_aliases=[
                 "h3", "minimax", "canvas", "canvas planner", "resolution",
@@ -163,15 +163,15 @@ class MiniMaxH3XCanvasSolver(io.ComfyNode):
                 "规划",
             ],
             description=(
-                "Resolve the exact canvas, frame grid, latent sizes and token count "
-                "before queueing. Runtime estimates are disabled unless an explicit "
-                "hardware profile is selected. / 在加入队列前计算精确画布、帧网格、"
-                "潜空间尺寸和令牌数；仅在明确选择硬件配置后估算运行时间。"),
+                "Resolve the exact canvas, frame grid, latent sizes and token "
+                "count before queueing. Runtime estimates are disabled unless "
+                "an explicit hardware profile is selected."),
             inputs=[
                 io.Combo.Input(
                     "aspect_ratio",
                     options=list(ASPECT_RATIOS),
                     default="16:9 (Widescreen)",
+                    tooltip="Shape of the canvas. Width and height snap to multiples of 32.",
                 ),
                 io.Float.Input(
                     "megapixels",
@@ -180,8 +180,8 @@ class MiniMaxH3XCanvasSolver(io.ComfyNode):
                     max=1.2,
                     step=0.05,
                     tooltip=(
-                        "Target area using ComfyUI's 1024*1024 megapixel unit. / "
-                        "使用 ComfyUI 的 1024*1024 百万像素单位设置目标面积。"),
+                        "Target area using ComfyUI's 1024*1024 megapixel "
+                        "unit."),
                 ),
                 io.Float.Input(
                     "seconds",
@@ -190,8 +190,8 @@ class MiniMaxH3XCanvasSolver(io.ComfyNode):
                     max=20.0,
                     step=0.1,
                     tooltip=(
-                        "Duration at 24 fps, snapped up to H3's 17k+5 frame grid. / "
-                        "按 24 fps 设置时长，并向上对齐到 H3 的 17k+5 帧网格。"),
+                        "Duration at 24 fps, snapped up to H3's 17k+5 frame "
+                        "grid."),
                 ),
                 io.Int.Input(
                     "steps",
@@ -199,8 +199,7 @@ class MiniMaxH3XCanvasSolver(io.ComfyNode):
                     min=1,
                     max=200,
                     tooltip=(
-                        "Used only when a hardware cost profile is selected. / "
-                        "仅在选择硬件成本配置时使用。"),
+                        "Used only when a hardware cost profile is selected."),
                 ),
                 io.Combo.Input(
                     "cost_profile",
@@ -208,8 +207,7 @@ class MiniMaxH3XCanvasSolver(io.ComfyNode):
                     default=NO_PROFILE,
                     tooltip=(
                         "No runtime estimate is made by default. Profiles are "
-                        "machine-specific and must be selected explicitly. / "
-                        "默认不估算运行时间；配置仅适用于特定机器，必须明确选择。"),
+                        "machine-specific and must be selected explicitly."),
                 ),
                 io.Float.Input(
                     "vram_budget_gib",
@@ -218,17 +216,16 @@ class MiniMaxH3XCanvasSolver(io.ComfyNode):
                     max=192.0,
                     step=0.5,
                     tooltip=(
-                        "Compared only with thresholds from the selected profile. / "
-                        "仅与所选配置中的阈值比较。"),
+                        "Compared only with thresholds from the selected "
+                        "profile."),
                 ),
                 io.Boolean.Input(
                     "clamp_to_trained_cap",
                     default=False,
                     tooltip=(
-                        "Off reports the canvas ComfyUI will actually create. On "
-                        "shrinks over-cap requests to H3's documented trained area. / "
-                        "关闭时报告 ComfyUI 实际创建的画布；开启时将超限请求缩小到 "
-                        "H3 文档中的训练面积。"),
+                        "Off reports the canvas ComfyUI will actually create. "
+                        "On shrinks over-cap requests to H3's documented "
+                        "trained area."),
                 ),
             ],
             outputs=[
