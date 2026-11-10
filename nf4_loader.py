@@ -23,7 +23,7 @@ if __package__:
         convert_minimax_text_encoder_state_dict,
         make_shape_probe,
         nf4_quantized_shapes,
-        without_quantized_payload,
+        with_placeholder_weights,
     )
 else:
     from nf4 import (
@@ -33,7 +33,7 @@ else:
         convert_minimax_text_encoder_state_dict,
         make_shape_probe,
         nf4_quantized_shapes,
-        without_quantized_payload,
+        with_placeholder_weights,
     )
 
 LOGGER = logging.getLogger(__name__)
@@ -756,7 +756,9 @@ def _load_nf4_vae(
     import comfy.sd
 
     shapes = nf4_quantized_shapes(converted_state_dict)
-    probe = without_quantized_payload(converted_state_dict, shapes)
+    # Without placeholders, core's lazy Linear would build each NF4 layer as a
+    # full float32 zeros tensor before the swap below (9 GiB for the video VAE).
+    probe = with_placeholder_weights(converted_state_dict, shapes)
     vae = comfy.sd.VAE(sd=probe, metadata=None)
     vae.throw_exception_if_invalid()
     replaced = _replace_quantized_linears(vae.first_stage_model, shapes)

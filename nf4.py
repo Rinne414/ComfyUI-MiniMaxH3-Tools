@@ -95,7 +95,9 @@ def _parse_quant_state_shape(value: torch.Tensor, key: str) -> QuantizedShape:
     try:
         decoded = json.loads(_tensor_bytes(value).decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise ValueError(f"NF4 quant-state '{key}' is not valid JSON: {error}") from error
+        raise ValueError(
+            f"NF4 quant-state '{key}' is not valid JSON: {error}"
+        ) from error
 
     if not isinstance(decoded, dict):
         raise ValueError(f"NF4 quant-state '{key}' must contain a JSON object")
@@ -105,8 +107,10 @@ def _parse_quant_state_shape(value: torch.Tensor, key: str) -> QuantizedShape:
             f"NF4 quant-state '{key}' declares quant_type={quant_type!r}; expected 'nf4'"
         )
     shape = decoded.get("shape")
-    if not isinstance(shape, list) or len(shape) != 2 or not all(
-        isinstance(item, int) and item > 0 for item in shape
+    if (
+        not isinstance(shape, list)
+        or len(shape) != 2
+        or not all(isinstance(item, int) and item > 0 for item in shape)
     ):
         raise ValueError(
             f"NF4 quant-state '{key}' must contain a positive two-dimensional shape"
@@ -114,7 +118,9 @@ def _parse_quant_state_shape(value: torch.Tensor, key: str) -> QuantizedShape:
     return (shape[0], shape[1])
 
 
-def nf4_quantized_shapes(state_dict: Mapping[str, torch.Tensor]) -> dict[str, QuantizedShape]:
+def nf4_quantized_shapes(
+    state_dict: Mapping[str, torch.Tensor],
+) -> dict[str, QuantizedShape]:
     """Return logical matrix shapes encoded in BitsAndBytes NF4 metadata."""
     shapes: dict[str, QuantizedShape] = {}
     for key, value in state_dict.items():
@@ -158,6 +164,24 @@ def without_quantized_payload(
     }
 
 
+def with_placeholder_weights(
+    state_dict: Mapping[str, torch.Tensor],
+    shapes: Mapping[str, QuantizedShape],
+) -> dict[str, torch.Tensor]:
+    """Remove the packed payload, but keep each NF4 weight as a placeholder.
+
+    The placeholder is a float32 view of a single zero with the weight's logical
+    shape, so it costs 4 bytes. Under dynamic VRAM, core's lazy Linear fills a
+    weight missing from the state dict with a full float32 zeros tensor; with a
+    placeholder it takes the view as is.
+    """
+    probe = without_quantized_payload(state_dict, shapes)
+    zero = torch.zeros(())
+    for key, shape in shapes.items():
+        probe[key] = zero.expand(shape)
+    return probe
+
+
 def convert_minimax_text_encoder_state_dict(
     state_dict: Mapping[str, torch.Tensor],
 ) -> dict[str, torch.Tensor]:
@@ -171,9 +195,12 @@ def convert_minimax_text_encoder_state_dict(
         elif key.startswith("model.visual."):
             key = "visual." + key[len("model.visual.") :]
         if key in converted:
-            raise ValueError(f"text encoder prefix conversion produced duplicate key '{key}'")
+            raise ValueError(
+                f"text encoder prefix conversion produced duplicate key '{key}'"
+            )
         converted[key] = value
     return converted
+
 
 def _fold_weight_norm(
     weight_g: torch.Tensor,
@@ -195,7 +222,9 @@ def _fold_weight_norm(
         weight_v.to(dtype=torch.float32), dim=dimensions, keepdim=True
     )
     if torch.any(norm == 0):
-        raise ValueError(f"weight-normalized tensor '{weight_key}_v' has a zero-norm channel")
+        raise ValueError(
+            f"weight-normalized tensor '{weight_key}_v' has a zero-norm channel"
+        )
     folded = weight_g.to(dtype=torch.float32) * weight_v.to(dtype=torch.float32) / norm
     return folded.to(dtype=weight_v.dtype)
 
