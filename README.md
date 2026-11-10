@@ -1,12 +1,29 @@
 # ComfyUI-MiniMaxH3-Tools
 
-ComfyUI support for DiffSynth-Studio's MiniMax-H3 NF4 weights, plus eight
-focused tools for gaps in the native MiniMax-H3 workflow.
+English | [简体中文](README_zh.md)
 
 MiniMax-H3 generates video and synchronized stereo audio in one sampling pass.
-Four experimental loaders make the complete NF4 FL2VA stack usable in ComfyUI.
-The other nodes add planning, prompt validation, and AV-latent operations that
-normal ComfyUI nodes cannot safely perform on H3 data.
+This pack adds the tools around it that ComfyUI does not have: planning the
+canvas and frame count before you queue, checking prompts, working on the paired
+video/audio latent, rerolling only the sound, and loading DiffSynth-Studio's NF4
+weights.
+
+**Install:** search `MiniMax-H3 Tools` in ComfyUI Manager (or run
+`comfy node install minimax-h3-tools`) and restart ComfyUI. It needs ComfyUI
+`0.30.0` or later. The four NF4 loaders also need BitsAndBytes; see
+[Install](#install).
+
+**Start here:** open ComfyUI's Templates browser, pick
+`MiniMax-H3_Planning_and_Prompt_Lint` under `ComfyUI-MiniMaxH3-Tools`, and run
+it. It needs no model files. Every example is also a plain `.json` file in
+[`example_workflows/`](example_workflows/) that you can drag into the editor.
+
+**Runs locally.** The nodes make no network requests and send nothing online.
+Model files are downloaded by you, or by ComfyUI when you click the download
+link it shows for a missing model in an example workflow.
+
+Node text is available in English and Simplified Chinese and follows ComfyUI's
+language setting; other languages show English.
 
 ## Why this exists
 
@@ -47,7 +64,9 @@ require BitsAndBytes in ComfyUI's Python environment:
 python -m pip install "bitsandbytes>=0.50.0"
 ```
 
-Restart ComfyUI and search for `MiniMax H3`.
+Restart ComfyUI and search for `MiniMax H3`. On startup the log states whether the
+NF4 loaders can run on this machine, for example
+`MiniMax-H3 Tools: NF4 loaders available (bitsandbytes 0.50.0)`.
 
 Model weights are separate. For the standard INT8 path, use the files documented
 by [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3). For NF4,
@@ -127,7 +146,8 @@ Outputs:
 - `frames` snapped up to H3's `17k+5` temporal grid
 - `latent_t` and `audio_t`
 - exact `video_tokens`
-- optional runtime estimates and a detailed report
+- optional runtime estimates and a detailed report, which the node also shows
+  on its face
 
 Runtime estimation is disabled by default. The node returns `-1.0` for both
 estimate outputs until a hardware profile is explicitly selected. This is
@@ -159,7 +179,7 @@ temporal grid, and the implied frame count before constructing an H3 latent.
 
 Reports both tensor shapes, duration, token count, dtype, device, and stream
 mismatches. This is intended for inspecting unfamiliar workflows before
-sampling.
+sampling. The report is shown on the node.
 
 ### MiniMax H3 Upscale Video Latent
 
@@ -183,7 +203,7 @@ It validates the required base or ref2va fields, shot numbering and timestamps,
 dialogue language tags, speaker IDs, voiceover wording, soundscape/music rules,
 and reference tag numbering. The node returns the original prompt, a readable
 report, and an `is_clean` boolean. `raise_on_warning` can make validation fail
-the workflow explicitly.
+the workflow explicitly. The report is also shown on the node.
 
 This complements prompt-generation nodes; it does not duplicate them.
 
@@ -210,7 +230,11 @@ describe that experiment only.
 
 ## Example workflows
 
-The files under `example_workflows/` appear in ComfyUI's template browser and can also be dragged directly into the editor:
+The files under `example_workflows/` appear in ComfyUI's Templates browser under
+`ComfyUI-MiniMaxH3-Tools` and can also be dragged directly into the editor. The
+loader nodes in them carry download links for the standard Comfy-Org INT8 files
+(`Comfy-Org/MiniMax-H3` on Hugging Face), so ComfyUI offers to download a model
+that is missing. Start with the first workflow; it needs no model files.
 
 | Workflow | Purpose | Model required |
 |---|---|---|
@@ -258,6 +282,7 @@ BitsAndBytes CUDA round trips.
 |---|---|
 | `*.py` | Installable ComfyUI extension and twelve nodes |
 | `tests/` | Behavior tests |
+| `locales/` | English and Simplified Chinese node text |
 | `example_workflows/` | Loadable planning, AV-latent, reroll, and advanced generation workflows |
 | `docs/` | Node-specific experimental findings |
 | `research/` | Single-machine calibration data and reproduction scripts |
