@@ -89,6 +89,17 @@ examples and a Chinese README.
   as core models' weights do. Measured on the NF4 text encoder: 13.3 GB resident
   before, about 2.1 GB after. The NF4 diffusion model and video VAE are not
   confirmed; see Known limits.
+- The NF4 video VAE loader no longer makes ComfyUI allocate about 9 GB of float32
+  zeros in system RAM while loading. Under dynamic VRAM, core filled every NF4
+  weight missing from the state dict with a full-size float32 tensor (36 blocks
+  x 67,108,864 values x 4 bytes = 9,216 MiB). Each NF4 weight is now passed as
+  a 4-byte placeholder with its logical shape. Fixed in code with tests; the
+  real-model result is pending (see Known limits).
+- The NF4 diffusion model loader now gives ComfyUI's dynamic VRAM the same
+  fast-disk storage policy that core's own loaders pass. Before, every staged
+  weight was first copied into pinned host RAM, which grew host memory on the
+  first sampling step until core's pin budget stopped it. Fixed in code with
+  tests; the real-model result is pending (see Known limits).
 - Torch Compile, hook and multi-GPU nodes can rebuild an NF4 model or text
   encoder instead of failing with
   `unexpected keyword argument 'disable_dynamic'`.
@@ -123,9 +134,12 @@ RTX 3090, 32 GB of RAM, ComfyUI at commit `ede4e5fe8`:
 - NF4 diffusion model: on 32 GB of RAM its resident memory rose from 2.2 GB to
   10.6 GB within about 4 s of the start of sampling, and the test's safety limit
   stopped the run. No step completed, so speed and peak RAM on the current core
-  are unknown.
+  are unknown. The cause was found (staged weights were copied into pinned host
+  RAM) and fixed in code with tests. Real-model confirmation: pending.
 - NF4 video VAE: resident memory rose to 10 GB during loading, and the test was
-  stopped before any decode.
+  stopped before any decode. The cause was found (core allocated float32 zeros
+  for every NF4 layer) and fixed in code with tests. Real-model confirmation:
+  pending.
 - The LoRA message on the legacy (non-dynamic) patcher path is unverified.
 - The NF4 diffusion model and video VAE loaders stay experimental. The NF4 versus
   INT8 table in the README was measured on ComfyUI 0.30.0 in August 2026 and is

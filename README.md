@@ -222,9 +222,13 @@ Not verified on the current core:
 
 - NF4 diffusion model: on 32 GB of RAM its resident memory rose from 2.2 GB to
   10.6 GB within about 4 s of the start of sampling, and the test's safety limit
-  stopped the run. No step completed, so speed and peak RAM are unknown.
+  stopped the run. No step completed, so speed and peak RAM are unknown. The
+  cause was found (staged weights were copied into pinned host RAM) and fixed in
+  code with tests. Real-model confirmation: pending.
 - NF4 video VAE: resident memory rose to 10 GB while loading, and the test was
-  stopped before any decode. Decoding with it is unverified.
+  stopped before any decode. Decoding with it is unverified. The cause was found
+  (core allocated float32 zeros for every NF4 layer) and fixed in code with
+  tests. Real-model confirmation: pending.
 - The LoRA message on the legacy (non-dynamic) patcher path is unverified.
 
 Because of this, the NF4 diffusion model and NF4 video VAE loaders stay
