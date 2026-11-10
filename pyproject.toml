@@ -1,17 +1,19 @@
 [project]
 name = "minimax-h3-tools"
-description = "ComfyUI loaders for MiniMax-H3 NF4 weights, plus prompt, canvas, audio reroll, and AV latent tools."
+description = "ComfyUI nodes for MiniMax-H3 video and audio generation: NF4 model loaders, prompt checking, canvas planning, audio-video latent tools, and audio reroll."
 version = "0.1.0"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = []
 readme = "README.md"
+classifiers = ["Operating System :: OS Independent"]
 
 [project.optional-dependencies]
 nf4 = ["bitsandbytes>=0.50.0"]
 
 [project.urls]
 Repository = "https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools"
+Documentation = "https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools#readme"
 "Bug Tracker" = "https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools/issues"
 "MiniMax-H3" = "https://huggingface.co/MiniMaxAI/MiniMax-H3"
 

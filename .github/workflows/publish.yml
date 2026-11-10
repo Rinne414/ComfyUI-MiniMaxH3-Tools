@@ -14,12 +14,21 @@ jobs:
   publish-node:
     name: Publish to Comfy Registry
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Check out extension
         uses: actions/checkout@v5
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
       - name: Publish custom node
-        uses: Comfy-Org/publish-node-action@v1
+        # Pinned to release 1.0.1 (commit 7578cdb0c1410f2515e6f9b1443c6859cab94f05).
+        uses: Comfy-Org/publish-node-action@1.0.1
         with:
           personal_access_token: ${{ secrets.REGISTRY_ACCESS_TOKEN }}
+
+      - name: Confirm the registry lists this version as latest and active
+        run: python scripts/verify_registry_release.py

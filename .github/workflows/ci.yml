@@ -4,14 +4,21 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  schedule:
+    # Mondays 05:17 UTC: also run against ComfyUI master to catch API breaks early.
+    - cron: "17 5 * * 1"
 
 permissions:
   contents: read
 
 jobs:
   verify:
+    name: Verify (ComfyUI ${{ matrix.comfyui }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(github.event_name == 'schedule' && '{"comfyui":["pinned","master"]}' || '{"comfyui":["pinned"]}') }}
     env:
       COMFYUI_COMMIT: 14b05228cef127ce529bc0c08660770d4af3e9a8
       COMFYUI_PATH: ${{ github.workspace }}/../ComfyUI
@@ -27,13 +34,21 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Check out pinned ComfyUI
+      - name: Check out ComfyUI (pinned commit or master)
         run: |
+          if [ "${{ matrix.comfyui }}" = "master" ]; then
+            COMFYUI_REF=master
+          else
+            COMFYUI_REF="$COMFYUI_COMMIT"
+          fi
           git init "$COMFYUI_PATH"
           git -C "$COMFYUI_PATH" remote add origin https://github.com/Comfy-Org/ComfyUI.git
-          git -C "$COMFYUI_PATH" fetch --depth=1 origin "$COMFYUI_COMMIT"
+          git -C "$COMFYUI_PATH" fetch --depth=1 origin "$COMFYUI_REF"
           git -C "$COMFYUI_PATH" checkout --detach FETCH_HEAD
-          test "$(git -C "$COMFYUI_PATH" rev-parse HEAD)" = "$COMFYUI_COMMIT"
+          if [ "${{ matrix.comfyui }}" != "master" ]; then
+            test "$(git -C "$COMFYUI_PATH" rev-parse HEAD)" = "$COMFYUI_COMMIT"
+          fi
+          echo "Testing against ComfyUI $(git -C "$COMFYUI_PATH" rev-parse HEAD)"
 
       - name: Install dependencies
         run: |
@@ -56,45 +71,4 @@ jobs:
         run: python -m pytest tests -q
 
       - name: Smoke-test extension registration
-        run: |
-          python - <<'PY'
-          import asyncio
-          import importlib.util
-          import sys
-          from pathlib import Path
-
-          root = Path.cwd()
-          spec = importlib.util.spec_from_file_location(
-              "comfyui_minimaxh3_tools",
-              root / "__init__.py",
-              submodule_search_locations=[str(root)],
-          )
-          if spec is None or spec.loader is None:
-              raise RuntimeError("failed to create the extension import spec")
-          module = importlib.util.module_from_spec(spec)
-          sys.modules[spec.name] = module
-          spec.loader.exec_module(module)
-          extension = asyncio.run(module.comfy_entrypoint())
-          nodes = asyncio.run(extension.get_node_list())
-          names = {node.__name__ for node in nodes}
-          expected = {
-              "MiniMaxH3XCanvasSolver",
-              "MiniMaxH3XSplitAV",
-              "MiniMaxH3XJoinAV",
-              "MiniMaxH3XLatentInfo",
-              "MiniMaxH3XUpscaleVideoLatent",
-              "MiniMaxH3XTemporalTrim",
-              "MiniMaxH3XPromptLint",
-              "MiniMaxH3XAudioReroll",
-              "MiniMaxH3XNF4ModelLoader",
-              "MiniMaxH3XNF4TextEncoderLoader",
-              "MiniMaxH3XNF4VideoVAELoader",
-              "MiniMaxH3XNF4AudioVAELoader",
-          }
-          if names != expected:
-              raise RuntimeError(
-                  "extension registration mismatch: expected %r, got %r"
-                  % (sorted(expected), sorted(names))
-              )
-          print("registered nodes:", ", ".join(sorted(names)))
-          PY
+        run: python scripts/smoke_registration.py

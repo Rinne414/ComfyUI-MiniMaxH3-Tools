@@ -3,3 +3,4 @@ tests/
 scripts/
 __pycache__/
 *.pyc
+.github/
