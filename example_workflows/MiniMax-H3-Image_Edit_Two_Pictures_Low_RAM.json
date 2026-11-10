@@ -1,0 +1,992 @@
+{
+ "id": "minimax-h3-image-edit-two-pictures-low-ram",
+ "revision": 0,
+ "last_node_id": 103,
+ "last_link_id": 18,
+ "nodes": [
+  {
+   "id": 1,
+   "type": "UNETLoader",
+   "pos": [
+    100,
+    130
+   ],
+   "size": [
+    270,
+    82
+   ],
+   "flags": {},
+   "order": 0,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "unet_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "unet_name"
+     },
+     "link": null
+    },
+    {
+     "name": "weight_dtype",
+     "type": "COMBO",
+     "widget": {
+      "name": "weight_dtype"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      3
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "UNETLoader",
+    "models": [
+     {
+      "name": "minimax_h3_image_pruned_w4a8.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3-Image/resolve/main/diffusion_models/minimax_h3_image_pruned_w4a8.safetensors",
+      "directory": "diffusion_models"
+     }
+    ]
+   },
+   "widgets_values": [
+    "minimax_h3_image_pruned_w4a8.safetensors",
+    "default"
+   ],
+   "title": "MiniMax-H3-Image model (w4a8) / MiniMax-H3-Image \u6a21\u578b\uff08w4a8\uff09"
+  },
+  {
+   "id": 3,
+   "type": "VAELoader",
+   "pos": [
+    100,
+    342
+   ],
+   "size": [
+    270,
+    58
+   ],
+   "flags": {},
+   "order": 1,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "vae_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "vae_name"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      2,
+      8
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAELoader",
+    "models": [
+     {
+      "name": "minimax_h3_image_vae_fp16.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3-Image/resolve/main/vae/minimax_h3_image_vae_fp16.safetensors",
+      "directory": "vae"
+     }
+    ]
+   },
+   "widgets_values": [
+    "minimax_h3_image_vae_fp16.safetensors"
+   ],
+   "title": "Image VAE / \u56fe\u50cf VAE"
+  },
+  {
+   "id": 4,
+   "type": "MiniMaxH3XImageEncodeLowRAM",
+   "pos": [
+    652.7984375,
+    130
+   ],
+   "size": [
+    534.898046875,
+    200
+   ],
+   "flags": {},
+   "order": 4,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "vae",
+     "shape": 7,
+     "type": "VAE",
+     "link": 2
+    },
+    {
+     "name": "images.image_1",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": 15
+    },
+    {
+     "name": "images.image_2",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": 17
+    },
+    {
+     "name": "clip_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "clip_name"
+     },
+     "link": null
+    },
+    {
+     "name": "prompt",
+     "type": "STRING",
+     "widget": {
+      "name": "prompt"
+     },
+     "link": 1
+    },
+    {
+     "name": "use_cache",
+     "type": "BOOLEAN",
+     "widget": {
+      "name": "use_cache"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "links": [
+      4
+     ]
+    },
+    {
+     "name": "negative",
+     "type": "CONDITIONING",
+     "links": [
+      5
+     ]
+    },
+    {
+     "name": "report",
+     "type": "STRING",
+     "links": [
+      12
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "MiniMaxH3XImageEncodeLowRAM",
+    "models": [
+     {
+      "name": "qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
+      "directory": "text_encoders"
+     }
+    ]
+   },
+   "widgets_values": [
+    "qwen3vl_32b_minimax_h3_int8_convrot.safetensors",
+    "",
+    true
+   ],
+   "title": "Encode prompt, low RAM / \u7f16\u7801\u63d0\u793a\u8bcd\uff08\u4f4e\u5185\u5b58\uff09"
+  },
+  {
+   "id": 7,
+   "type": "KSampler",
+   "pos": [
+    1287.696484375,
+    382
+   ],
+   "size": [
+    270,
+    262
+   ],
+   "flags": {},
+   "order": 9,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 3
+    },
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "link": 4
+    },
+    {
+     "name": "negative",
+     "type": "CONDITIONING",
+     "link": 5
+    },
+    {
+     "name": "latent_image",
+     "type": "LATENT",
+     "link": 6
+    },
+    {
+     "name": "seed",
+     "type": "INT",
+     "widget": {
+      "name": "seed"
+     },
+     "link": null
+    },
+    {
+     "name": "steps",
+     "type": "INT",
+     "widget": {
+      "name": "steps"
+     },
+     "link": null
+    },
+    {
+     "name": "cfg",
+     "type": "FLOAT",
+     "widget": {
+      "name": "cfg"
+     },
+     "link": null
+    },
+    {
+     "name": "sampler_name",
+     "type": "COMBO",
+     "widget": {
+      "name": "sampler_name"
+     },
+     "link": null
+    },
+    {
+     "name": "scheduler",
+     "type": "COMBO",
+     "widget": {
+      "name": "scheduler"
+     },
+     "link": null
+    },
+    {
+     "name": "denoise",
+     "type": "FLOAT",
+     "widget": {
+      "name": "denoise"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      7
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "KSampler"
+   },
+   "widgets_values": [
+    42,
+    "fixed",
+    6,
+    1,
+    "euler",
+    "simple",
+    1
+   ],
+   "title": "Sampler: 6 steps, cfg 1 / \u91c7\u6837\u5668\uff1a6 \u6b65\uff0ccfg 1"
+  },
+  {
+   "id": 8,
+   "type": "VAEDecode",
+   "pos": [
+    1657.696484375,
+    130
+   ],
+   "size": [
+    140,
+    46
+   ],
+   "flags": {},
+   "order": 10,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 7
+    },
+    {
+     "name": "vae",
+     "type": "VAE",
+     "link": 8
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      9
+     ]
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAEDecode"
+   },
+   "title": "Decode image / \u89e3\u7801\u56fe\u50cf"
+  },
+  {
+   "id": 9,
+   "type": "SaveImage",
+   "pos": [
+    1897.696484375,
+    130
+   ],
+   "size": [
+    270,
+    58
+   ],
+   "flags": {},
+   "order": 11,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "images",
+     "type": "IMAGE",
+     "link": 9
+    },
+    {
+     "name": "filename_prefix",
+     "type": "STRING",
+     "widget": {
+      "name": "filename_prefix"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "images",
+     "type": "IMAGE",
+     "links": null
+    }
+   ],
+   "properties": {},
+   "widgets_values": [
+    "MiniMax-H3-Image/edit"
+   ],
+   "title": "Save image / \u4fdd\u5b58\u56fe\u50cf"
+  },
+  {
+   "id": 10,
+   "type": "MiniMaxH3XImageSize",
+   "pos": [
+    652.7984375,
+    964
+   ],
+   "size": [
+    324.228125,
+    142
+   ],
+   "flags": {},
+   "order": 7,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "suggested_ratio",
+     "shape": 7,
+     "type": "STRING",
+     "link": 10
+    },
+    {
+     "name": "image",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": 11
+    },
+    {
+     "name": "aspect_ratio",
+     "type": "COMBO",
+     "widget": {
+      "name": "aspect_ratio"
+     },
+     "link": null
+    },
+    {
+     "name": "megapixels",
+     "type": "COMBO",
+     "widget": {
+      "name": "megapixels"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      6
+     ]
+    },
+    {
+     "name": "width",
+     "type": "INT",
+     "links": null
+    },
+    {
+     "name": "height",
+     "type": "INT",
+     "links": null
+    },
+    {
+     "name": "aspect_ratio",
+     "type": "STRING",
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "MiniMaxH3XImageSize"
+   },
+   "widgets_values": [
+    "1:1",
+    "16 MP (best, model card)"
+   ],
+   "title": "Canvas size / \u753b\u5e03\u5c3a\u5bf8"
+  },
+  {
+   "id": 50,
+   "type": "PreviewAny",
+   "pos": [
+    1287.696484375,
+    130
+   ],
+   "size": [
+    210,
+    122
+   ],
+   "flags": {},
+   "order": 8,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "source",
+     "type": "*",
+     "link": 12
+    }
+   ],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "PreviewAny"
+   },
+   "widgets_values": [],
+   "title": "Encoder report / \u7f16\u7801\u62a5\u544a"
+  },
+  {
+   "id": 51,
+   "type": "PreviewAny",
+   "pos": [
+    652.7984375,
+    712
+   ],
+   "size": [
+    210,
+    122
+   ],
+   "flags": {},
+   "order": 6,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "source",
+     "type": "*",
+     "link": 13
+    }
+   ],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "PreviewAny"
+   },
+   "widgets_values": [],
+   "title": "Expander report / \u6269\u5199\u62a5\u544a"
+  },
+  {
+   "id": 52,
+   "type": "PreviewAny",
+   "pos": [
+    652.7984375,
+    460
+   ],
+   "size": [
+    210,
+    122
+   ],
+   "flags": {},
+   "order": 5,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "source",
+     "type": "*",
+     "link": 14
+    }
+   ],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "PreviewAny"
+   },
+   "widgets_values": [],
+   "title": "Prompt sent to the model / \u53d1\u9001\u7ed9\u6a21\u578b\u7684\u63d0\u793a\u8bcd"
+  },
+  {
+   "id": 60,
+   "type": "MiniMaxH3XImagePromptExpand",
+   "pos": [
+    100,
+    530
+   ],
+   "size": [
+    452.7984375,
+    268
+   ],
+   "flags": {},
+   "order": 2,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "images.image_1",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": 16
+    },
+    {
+     "name": "images.image_2",
+     "shape": 7,
+     "type": "IMAGE",
+     "link": 18
+    },
+    {
+     "name": "prompt",
+     "type": "STRING",
+     "widget": {
+      "name": "prompt"
+     },
+     "link": null
+    },
+    {
+     "name": "expand",
+     "type": "BOOLEAN",
+     "widget": {
+      "name": "expand"
+     },
+     "link": null
+    },
+    {
+     "name": "text_model",
+     "type": "COMBO",
+     "widget": {
+      "name": "text_model"
+     },
+     "link": null
+    },
+    {
+     "name": "seed",
+     "type": "INT",
+     "widget": {
+      "name": "seed"
+     },
+     "link": null
+    },
+    {
+     "name": "max_length",
+     "type": "INT",
+     "widget": {
+      "name": "max_length"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "prompt",
+     "type": "STRING",
+     "links": [
+      1,
+      14
+     ]
+    },
+    {
+     "name": "aspect_ratio",
+     "type": "STRING",
+     "links": [
+      10
+     ]
+    },
+    {
+     "name": "report",
+     "type": "STRING",
+     "links": [
+      13
+     ]
+    },
+    {
+     "name": "raw_reply",
+     "type": "STRING",
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "MiniMaxH3XImagePromptExpand",
+    "models": [
+     {
+      "name": "qwen3.5_9b_w4a8_gptq.safetensors",
+      "url": "https://huggingface.co/Comfy-Org/Qwen3.5/resolve/main/text_encoders/qwen3.5_9b_w4a8_gptq.safetensors",
+      "directory": "text_encoders"
+     }
+    ]
+   },
+   "widgets_values": [
+    "Edit <Picture 1>: place the main subject of <Picture 2> into the scene. Keep the lighting, style, canvas and all text of <Picture 1> unchanged.",
+    false,
+    "qwen3.5_9b_w4a8_gptq.safetensors",
+    0,
+    "randomize",
+    8192
+   ],
+   "title": "Prompt expander / \u63d0\u793a\u8bcd\u6269\u5199"
+  },
+  {
+   "id": 101,
+   "type": "LoadImage",
+   "pos": [
+    100,
+    928
+   ],
+   "size": [
+    270,
+    314
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "image",
+     "type": "COMBO",
+     "widget": {
+      "name": "image"
+     },
+     "link": null
+    },
+    {
+     "name": "upload",
+     "type": "IMAGEUPLOAD",
+     "widget": {
+      "name": "upload"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      11,
+      15,
+      16
+     ]
+    },
+    {
+     "name": "MASK",
+     "type": "MASK",
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage"
+   },
+   "widgets_values": [
+    "example.png",
+    "image"
+   ],
+   "title": "Picture to edit (Picture 1) / \u8981\u7f16\u8f91\u7684\u56fe\u7247\uff08\u56fe\u7247 1\uff09"
+  },
+  {
+   "id": 102,
+   "type": "MarkdownNote",
+   "pos": [
+    1300,
+    420
+   ],
+   "size": [
+    760,
+    600
+   ],
+   "flags": {},
+   "order": 12,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "properties": {},
+   "widgets_values": [
+    "# MiniMax-H3-Image: edit with two pictures, low RAM / MiniMax-H3-Image\uff1a\u7528\u4e24\u5f20\u56fe\u7247\u7f16\u8f91\uff08\u4f4e\u5185\u5b58\uff09\n\n**English:** The first Load Image is the picture to edit (Picture 1); the second is a reference (Picture 2). Refer to them as <Picture 1> and <Picture 2> in the instruction. Both are connected to the encoder, so both reach the model; only the first sets the canvas shape. Add more references by connecting more pictures to the encoder's image inputs. Expansion is off, as in the single-picture edit.\n\n**\u7b80\u4f53\u4e2d\u6587\uff1a** \u7b2c\u4e00\u4e2a Load Image \u662f\u8981\u7f16\u8f91\u7684\u56fe\u7247\uff08\u56fe\u7247 1\uff09\uff0c\u7b2c\u4e8c\u4e2a\u662f\u53c2\u8003\u56fe\uff08\u56fe\u7247 2\uff09\u3002\u5728\u6307\u4ee4\u4e2d\u7528 <Picture 1> \u548c <Picture 2> \u6307\u4ee3\u5b83\u4eec\u3002\u4e24\u5f20\u56fe\u7247\u90fd\u8fde\u63a5\u5230\u7f16\u7801\u8282\u70b9\uff0c\u56e0\u6b64\u90fd\u4f1a\u4ea4\u7ed9\u6a21\u578b\uff1b\u53ea\u6709\u7b2c\u4e00\u5f20\u51b3\u5b9a\u753b\u5e03\u7684\u5f62\u72b6\u3002\u9700\u8981\u66f4\u591a\u53c2\u8003\u56fe\u65f6\uff0c\u628a\u66f4\u591a\u56fe\u7247\u63a5\u5230\u7f16\u7801\u8282\u70b9\u7684\u56fe\u7247\u8f93\u5165\u4e0a\u3002\u8fd9\u91cc\u4e0e\u5355\u56fe\u7f16\u8f91\u4e00\u6837\u9ed8\u8ba4\u5173\u95ed\u6269\u5199\u3002"
+   ],
+   "color": "#432",
+   "bgcolor": "#653",
+   "title": "How to use / \u4f7f\u7528\u8bf4\u660e"
+  },
+  {
+   "id": 103,
+   "type": "LoadImage",
+   "pos": [
+    100,
+    1300
+   ],
+   "size": [
+    270,
+    314
+   ],
+   "flags": {},
+   "order": 13,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "image",
+     "type": "COMBO",
+     "widget": {
+      "name": "image"
+     },
+     "link": null
+    },
+    {
+     "name": "upload",
+     "type": "IMAGEUPLOAD",
+     "widget": {
+      "name": "upload"
+     },
+     "link": null
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      17,
+      18
+     ]
+    },
+    {
+     "name": "MASK",
+     "type": "MASK",
+     "links": null
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoadImage"
+   },
+   "widgets_values": [
+    "example.png",
+    "image"
+   ],
+   "title": "Reference picture (Picture 2) / \u53c2\u8003\u56fe\u7247\uff08\u56fe\u7247 2\uff09"
+  }
+ ],
+ "links": [
+  [
+   1,
+   60,
+   0,
+   4,
+   4,
+   "STRING"
+  ],
+  [
+   2,
+   3,
+   0,
+   4,
+   0,
+   "VAE"
+  ],
+  [
+   3,
+   1,
+   0,
+   7,
+   0,
+   "MODEL"
+  ],
+  [
+   4,
+   4,
+   0,
+   7,
+   1,
+   "CONDITIONING"
+  ],
+  [
+   5,
+   4,
+   1,
+   7,
+   2,
+   "CONDITIONING"
+  ],
+  [
+   6,
+   10,
+   0,
+   7,
+   3,
+   "LATENT"
+  ],
+  [
+   7,
+   7,
+   0,
+   8,
+   0,
+   "LATENT"
+  ],
+  [
+   8,
+   3,
+   0,
+   8,
+   1,
+   "VAE"
+  ],
+  [
+   9,
+   8,
+   0,
+   9,
+   0,
+   "IMAGE"
+  ],
+  [
+   10,
+   60,
+   1,
+   10,
+   0,
+   "STRING"
+  ],
+  [
+   11,
+   101,
+   0,
+   10,
+   1,
+   "IMAGE"
+  ],
+  [
+   12,
+   4,
+   2,
+   50,
+   0,
+   "STRING"
+  ],
+  [
+   13,
+   60,
+   2,
+   51,
+   0,
+   "STRING"
+  ],
+  [
+   14,
+   60,
+   0,
+   52,
+   0,
+   "STRING"
+  ],
+  [
+   15,
+   101,
+   0,
+   4,
+   1,
+   "IMAGE"
+  ],
+  [
+   16,
+   101,
+   0,
+   60,
+   0,
+   "IMAGE"
+  ],
+  [
+   17,
+   103,
+   0,
+   4,
+   2,
+   "IMAGE"
+  ],
+  [
+   18,
+   103,
+   0,
+   60,
+   1,
+   "IMAGE"
+  ]
+ ],
+ "groups": [],
+ "config": {},
+ "extra": {
+  "ds": {
+   "scale": 0.6,
+   "offset": [
+    40,
+    40
+   ]
+  }
+ },
+ "version": 0.4
+}

@@ -66,33 +66,58 @@ class Workflow(TypedDict):
     version: float
 
 
-MODEL_REPOSITORY_URL = "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main"
+HUGGINGFACE_URL = "https://huggingface.co"
 
-# Loader file name -> folder inside the Comfy-Org/MiniMax-H3 repository and in
-# ComfyUI's models directory. ComfyUI shows a download link for a missing file.
-MODEL_DIRECTORIES: dict[str, str] = {
-    "minimax_h3_fl2va_pruned_int8_convrot.safetensors": "diffusion_models",
-    "minimax_h3_ref2va_pruned_int8_convrot.safetensors": "diffusion_models",
-    "qwen3vl_32b_minimax_h3_int8_convrot.safetensors": "text_encoders",
-    "minimax_h3_video_vae_fp16.safetensors": "vae",
-    "minimax_h3_audio_vae_fp32.safetensors": "vae",
+# File name -> (Hugging Face repository, folder inside it and in ComfyUI's models
+# directory). ComfyUI shows a download link for a file that is missing. Every entry
+# was checked against the repository's file listing.
+MODEL_SOURCES: dict[str, tuple[str, str]] = {
+    "minimax_h3_fl2va_pruned_int8_convrot.safetensors": (
+        "Comfy-Org/MiniMax-H3", "diffusion_models"),
+    "minimax_h3_ref2va_pruned_int8_convrot.safetensors": (
+        "Comfy-Org/MiniMax-H3", "diffusion_models"),
+    "qwen3vl_32b_minimax_h3_int8_convrot.safetensors": (
+        "Comfy-Org/MiniMax-H3", "text_encoders"),
+    "minimax_h3_video_vae_fp16.safetensors": ("Comfy-Org/MiniMax-H3", "vae"),
+    "minimax_h3_audio_vae_fp32.safetensors": ("Comfy-Org/MiniMax-H3", "vae"),
+    "minimax_h3_image_pruned_w4a8.safetensors": (
+        "Comfy-Org/MiniMax-H3-Image", "diffusion_models"),
+    "minimax_h3_image_vae_fp16.safetensors": ("Comfy-Org/MiniMax-H3-Image", "vae"),
+    "qwen3.5_9b_w4a8_gptq.safetensors": ("Comfy-Org/Qwen3.5", "text_encoders"),
 }
-LOADER_TYPES = frozenset({"UNETLoader", "CLIPLoader", "VAELoader"})
+MODEL_DIRECTORIES: dict[str, str] = {
+    name: source[1] for name, source in MODEL_SOURCES.items()
+}
+
+# Node type -> index of the widget that holds the model file name.
+MODEL_WIDGET_INDEX: dict[str, int] = {
+    "UNETLoader": 0,
+    "CLIPLoader": 0,
+    "VAELoader": 0,
+    "MiniMaxH3XImageEncodeLowRAM": 0,
+    "MiniMaxH3XImagePromptExpand": 2,
+}
+LOADER_TYPES = frozenset(MODEL_WIDGET_INDEX)
+
+
+def model_url(name: str) -> str:
+    repository, directory = MODEL_SOURCES[name]
+    return "%s/%s/resolve/main/%s/%s" % (HUGGINGFACE_URL, repository, directory, name)
 
 
 def model_download_properties(
         node_type: str, widgets: tuple[WidgetValue, ...]) -> list[dict[str, str]]:
-    """Return the ``properties.models`` entry for a loader, or an empty list."""
-    if node_type not in LOADER_TYPES or not widgets:
+    """Return the ``properties.models`` entry for a model-loading node, or an empty list."""
+    index = MODEL_WIDGET_INDEX.get(node_type)
+    if index is None or len(widgets) <= index:
         return []
-    name = widgets[0]
-    directory = MODEL_DIRECTORIES.get(str(name))
-    if directory is None:
+    name = str(widgets[index])
+    if name not in MODEL_SOURCES:
         return []
     return [{
-        "name": str(name),
-        "url": "%s/%s/%s" % (MODEL_REPOSITORY_URL, directory, name),
-        "directory": directory,
+        "name": name,
+        "url": model_url(name),
+        "directory": MODEL_SOURCES[name][1],
     }]
 
 
