@@ -16,7 +16,7 @@ connection order.
 
 import comfy.nested_tensor
 import comfy.utils
-from comfy_api.latest import ComfyExtension, io
+from comfy_api.latest import ComfyExtension, io, ui
 
 FPS = 24
 AUDIO_LATENT_FPS = 40
@@ -217,7 +217,13 @@ class MiniMaxH3XLatentInfo(io.ComfyNode):
         if c != VIDEO_CHANNELS:
             lines.append("WARNING video channels=%d, expected %d" % (c, VIDEO_CHANNELS))
 
-        return io.NodeOutput("\n".join(lines), frames if frames is not None else 0, tokens)
+        report = "\n".join(lines)
+        return io.NodeOutput(
+            report,
+            frames if frames is not None else 0,
+            tokens,
+            ui=ui.PreviewText(report),
+        )
 
 
 class MiniMaxH3XUpscaleVideoLatent(io.ComfyNode):

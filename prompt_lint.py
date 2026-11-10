@@ -14,7 +14,7 @@ Both live in the MiniMaxAI/MiniMax-H3 repo.
 
 import re
 
-from comfy_api.latest import ComfyExtension, io
+from comfy_api.latest import ComfyExtension, io, ui
 
 FPS = 24
 
@@ -407,7 +407,7 @@ class MiniMaxH3XPromptLint(io.ComfyNode):
                              "\n".join("  - " + w for w in warnings))
         text = ("clean -- no issues found" if not warnings else
                 "\n".join("%d. %s" % (i + 1, w) for i, w in enumerate(warnings)))
-        return io.NodeOutput(prompt, text, not warnings)
+        return io.NodeOutput(prompt, text, not warnings, ui=ui.PreviewText(text))
 
 
 class PromptLintExtension(ComfyExtension):

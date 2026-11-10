@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from comfy_api.latest import ComfyExtension, io
+from comfy_api.latest import ComfyExtension, io, ui
 
 if __package__:
     from .calibration import (
@@ -318,6 +318,7 @@ class MiniMaxH3XCanvasSolver(io.ComfyNode):
             sit,
             total_minutes,
             report,
+            ui=ui.PreviewText(report),
         )
 
 
