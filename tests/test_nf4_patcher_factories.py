@@ -110,6 +110,30 @@ def test_diffusion_model_factory_accepts_disable_dynamic(no_files, monkeypatch) 
     assert type(factory(*factory_args)) is _DynamicPatcher
 
 
+@pytest.mark.parametrize("fast", [True, False], ids=["fast-disk", "slow-disk"])
+def test_diffusion_model_patcher_uses_core_storage_policy(
+    fast, no_files, monkeypatch
+) -> None:
+    """Core's loaders tell the patcher whether the file sits on a fast disk
+    (comfy/sd.py load_diffusion_model_state_dict). Without it dynamic VRAM copies
+    every staged weight into pinned host RAM instead of reading the file."""
+    storage = pytest.importorskip("comfy.storage")  # core's policy, 2026-09
+    state_dict = _nf4_state_dict("blocks.0.attn.qkv_proj.weight", (192, 64))
+    storage.annotate_state_dict(state_dict, "dit.safetensors")
+    no_files(state_dict)
+    monkeypatch.setattr(
+        comfy.model_detection,
+        "model_config_from_unet",
+        lambda *args, **kwargs: _DiTConfig(),
+    )
+    monkeypatch.setattr(storage, "fast_storage", lambda path: fast)
+
+    patcher = nf4_loader.load_nf4_diffusion_model("dit.safetensors")
+
+    assert patcher.fast_disk is fast
+    assert patcher.clone(disable_dynamic=True).fast_disk is fast
+
+
 def test_text_encoder_factory_accepts_disable_dynamic(no_files, monkeypatch) -> None:
     no_files(
         _nf4_state_dict("model.language_model.layers.0.mlp.up_proj.weight", (8, 4))

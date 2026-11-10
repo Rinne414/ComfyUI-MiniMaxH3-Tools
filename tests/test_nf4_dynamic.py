@@ -8,6 +8,8 @@ and why.
 
 from __future__ import annotations
 
+import inspect
+
 import pytest
 import torch
 
@@ -15,6 +17,7 @@ from nf4_cpu_support import (
     BACKENDS,
     CPU,
     dynamic_patcher,
+    fake_aimdo,
     make_case,
     needs_file_backed_weights,
     needs_prefetch,
@@ -25,6 +28,8 @@ from nf4_cpu_support import (
 import comfy.memory_management  # noqa: E402  (nf4_cpu_support set up the CPU first)
 import comfy.model_patcher  # noqa: E402
 import comfy.model_prefetch  # noqa: E402
+import comfy.ops  # noqa: E402
+import comfy.pinned_memory  # noqa: E402
 
 
 def _loaded(backend, monkeypatch, offloaded):
@@ -55,6 +60,55 @@ def test_dynamic_prefetch_stages_nf4_linear_bytes(backend, monkeypatch) -> None:
     finally:
         comfy.model_prefetch.cleanup_prefetched_modules(model, [case.module])
     assert not hasattr(case.module, "_prefetch")
+
+
+@needs_prefetch
+@pytest.mark.skipif(
+    "fast_disk"
+    not in inspect.signature(
+        comfy.model_patcher.ModelPatcherDynamic.__init__
+    ).parameters,
+    reason="this ComfyUI has no fast-disk storage policy",
+)
+@pytest.mark.parametrize("fast_disk", [True, False], ids=["fast-disk", "slow-disk"])
+def test_staging_copies_nf4_weights_into_pinned_ram_only_off_a_fast_disk(
+    fast_disk, monkeypatch
+) -> None:
+    """Why the loader must pass core's storage policy: with a VRAM slot granted,
+    core reads a fast disk straight into VRAM, otherwise it first copies the
+    weight into a pinned host buffer (comfy/ops.py cast_modules_with_vbar)."""
+    import comfy_aimdo.model_vbar
+
+    case = make_case("fake", monkeypatch)
+    model = torch.nn.Sequential(case.module)
+    fake_aimdo(monkeypatch)
+    pinned = []
+    monkeypatch.setattr(
+        comfy.pinned_memory,
+        "pin_memory",
+        lambda m, subset, size=None: pinned.append(subset),
+    )
+    monkeypatch.setattr(comfy_aimdo.model_vbar, "vbar_fault", lambda v: object())
+    monkeypatch.setattr(
+        comfy.ops.comfy_aimdo.torch,
+        "aimdo_to_tensor",
+        lambda v, device: torch.empty(v[2], dtype=torch.uint8),
+    )
+    patcher = comfy.model_patcher.ModelPatcherDynamic(
+        model, CPU, CPU, fast_disk=fast_disk
+    )
+    patcher.load(CPU)
+
+    comfy.model_prefetch.pin_modules([case.module], CPU, None)
+    try:
+        staged = case.module._prefetch["xfer_dest"]
+        weight, _ = comfy.memory_management.interpret_gathered_like(
+            [case.packed, case.module.bias], staged
+        )
+        assert torch.equal(weight, case.packed)
+    finally:
+        comfy.model_prefetch.cleanup_prefetched_modules(model, [case.module])
+    assert pinned == ([] if fast_disk else ["weights-loaded"])
 
 
 @needs_file_backed_weights

@@ -629,6 +629,21 @@ def _minimax_h3_config(path, state_dict, metadata):
     return model_config
 
 
+def _storage_options(state_dict: Mapping[str, torch.Tensor]) -> dict:
+    """The fast-disk policy core's own loaders give their patcher.
+
+    On a fast disk, dynamic VRAM reads weights from the file straight into VRAM;
+    without it, every staged weight is first copied into pinned host RAM
+    (comfy/ops.py cast_modules_with_vbar). Cores before the policy (2026-09) have
+    neither comfy.storage nor the patcher argument.
+    """
+    try:
+        import comfy.storage
+    except ImportError:
+        return {}
+    return {"fast_disk": comfy.storage.state_dict_fast_disk(state_dict)}
+
+
 def load_nf4_diffusion_model(path: str, disable_dynamic: bool = False):
     _require_bitsandbytes()
     import comfy.model_management
@@ -652,7 +667,10 @@ def load_nf4_diffusion_model(path: str, disable_dynamic: bool = False):
         else comfy.model_patcher.CoreModelPatcher
     )
     patcher = patcher_class(
-        model, load_device=load_device, offload_device=offload_device
+        model,
+        load_device=load_device,
+        offload_device=offload_device,
+        **_storage_options(state_dict),
     )
     if not comfy.model_management.is_device_cpu(offload_device):
         model.to(offload_device)
