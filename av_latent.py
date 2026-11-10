@@ -76,6 +76,10 @@ class MiniMaxH3XSplitAV(io.ComfyNode):
             node_id="MiniMaxH3XSplitAV",
             display_name="MiniMax H3 Split AV Latent / 拆分音视频潜空间",
             category="model/latent/minimax",
+            search_aliases=[
+                "h3", "minimax", "split", "av latent", "video latent",
+                "audio latent", "nested tensor", "拆分", "潜空间", "音视频",
+            ],
             description=(
                 "Split an H3 AV latent into separate video and audio latents. / "
                 "将 H3 音视频潜空间拆分为独立的视频和音频潜空间。"),
@@ -98,6 +102,10 @@ class MiniMaxH3XJoinAV(io.ComfyNode):
             node_id="MiniMaxH3XJoinAV",
             display_name="MiniMax H3 Join AV Latent / 合并音视频潜空间",
             category="model/latent/minimax",
+            search_aliases=[
+                "h3", "minimax", "join", "merge", "combine", "av latent",
+                "nested tensor", "合并", "潜空间", "音视频",
+            ],
             description=(
                 "Recombine video and audio latents into an H3 AV latent. Validates "
                 "that both streams describe the same frame count. / 将视频和音频潜空间"
@@ -170,6 +178,10 @@ class MiniMaxH3XLatentInfo(io.ComfyNode):
             node_id="MiniMaxH3XLatentInfo",
             display_name="MiniMax H3 AV Latent Info / 音视频潜空间信息",
             category="model/latent/minimax",
+            search_aliases=[
+                "h3", "minimax", "latent info", "inspect latent",
+                "latent shape", "frames", "tokens", "潜空间信息", "潜空间", "音视频",
+            ],
             description=(
                 "Report both stream shapes, implied duration and token count. / "
                 "报告两个流的形状、推算时长和令牌数。"),
@@ -221,6 +233,10 @@ class MiniMaxH3XUpscaleVideoLatent(io.ComfyNode):
             node_id="MiniMaxH3XUpscaleVideoLatent",
             display_name="MiniMax H3 Upscale Video Latent / 放大视频潜空间",
             category="model/latent/minimax",
+            search_aliases=[
+                "h3", "minimax", "upscale", "resize", "video latent",
+                "two stage", "放大", "潜空间", "视频",
+            ],
             description=(
                 "Resize the video stream of an H3 AV latent, leaving audio alone. "
                 "Target pixel dimensions snap to multiples of 32. / 仅调整 H3 音视频"
@@ -271,6 +287,10 @@ class MiniMaxH3XTemporalTrim(io.ComfyNode):
             node_id="MiniMaxH3XTemporalTrim",
             display_name="MiniMax H3 Temporal Trim / 时长裁剪",
             category="model/latent/minimax",
+            search_aliases=[
+                "h3", "minimax", "trim", "shorten", "cut", "duration",
+                "av latent", "裁剪", "时长", "缩短", "潜空间",
+            ],
             description=(
                 "Shorten an H3 AV latent, keeping video and audio coherent. The "
                 "result is snapped to the model's 17k+5 frame grid. / 在保持音视频"

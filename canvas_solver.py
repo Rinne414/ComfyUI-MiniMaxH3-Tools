@@ -157,6 +157,11 @@ class MiniMaxH3XCanvasSolver(io.ComfyNode):
             node_id="MiniMaxH3XCanvasSolver",
             display_name="MiniMax H3 Canvas Planner / 画布规划",
             category="model/latent/minimax",
+            search_aliases=[
+                "h3", "minimax", "canvas", "canvas planner", "resolution",
+                "17k+5", "frames", "frame count", "tokens", "画布", "分辨率", "帧数",
+                "规划",
+            ],
             description=(
                 "Resolve the exact canvas, frame grid, latent sizes and token count "
                 "before queueing. Runtime estimates are disabled unless an explicit "

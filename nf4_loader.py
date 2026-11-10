@@ -720,8 +720,13 @@ class MiniMaxH3XNF4ModelLoader(io.ComfyNode):
 
         return io.Schema(
             node_id="MiniMaxH3XNF4ModelLoader",
+            is_experimental=True,
             display_name="MiniMax H3 NF4 Model Loader / NF4 模型加载",
             category="model/loaders/minimax",
+            search_aliases=[
+                "h3", "minimax", "nf4", "bitsandbytes", "4bit",
+                "diffusion model", "unet", "loader", "模型加载", "量化",
+            ],
             description=(
                 "Load a DiffSynth-format MiniMax H3 NF4 diffusion model with "
                 "BitsAndBytes. / 使用 BitsAndBytes 加载 DiffSynth 格式的 MiniMax H3 NF4 扩散模型。"
@@ -730,6 +735,9 @@ class MiniMaxH3XNF4ModelLoader(io.ComfyNode):
                 io.Combo.Input(
                     "model_name",
                     options=folder_paths.get_filename_list("diffusion_models"),
+                    tooltip=(
+                        "The NF4 FL2VA diffusion model, saved as minimax-h3-fl2va-nf4.safetensors in models/diffusion_models."
+                    ),
                 )
             ],
             outputs=[io.Model.Output()],
@@ -748,8 +756,13 @@ class MiniMaxH3XNF4TextEncoderLoader(io.ComfyNode):
 
         return io.Schema(
             node_id="MiniMaxH3XNF4TextEncoderLoader",
+            is_experimental=True,
             display_name="MiniMax H3 NF4 Text Encoder Loader / NF4 文本编码器加载",
             category="model/loaders/minimax",
+            search_aliases=[
+                "h3", "minimax", "nf4", "bitsandbytes", "4bit",
+                "text encoder", "qwen3-vl", "clip", "loader", "文本编码器", "量化",
+            ],
             description=(
                 "Load the DiffSynth-format MiniMax H3 Qwen3-VL NF4 encoder. / "
                 "加载 DiffSynth 格式的 MiniMax H3 Qwen3-VL NF4 编码器。"
@@ -758,6 +771,9 @@ class MiniMaxH3XNF4TextEncoderLoader(io.ComfyNode):
                 io.Combo.Input(
                     "encoder_name",
                     options=folder_paths.get_filename_list("text_encoders"),
+                    tooltip=(
+                        "The NF4 Qwen3-VL text encoder, saved as minimax-h3-text-encoder-nf4.safetensors in models/text_encoders."
+                    ),
                 )
             ],
             outputs=[io.Clip.Output()],
@@ -776,8 +792,13 @@ class MiniMaxH3XNF4VideoVAELoader(io.ComfyNode):
 
         return io.Schema(
             node_id="MiniMaxH3XNF4VideoVAELoader",
+            is_experimental=True,
             display_name="MiniMax H3 NF4 Video VAE Loader / NF4 视频 VAE 加载",
             category="model/loaders/minimax",
+            search_aliases=[
+                "h3", "minimax", "nf4", "bitsandbytes", "4bit", "video vae",
+                "vae", "loader", "视频 VAE", "量化",
+            ],
             description=(
                 "Load the DiffSynth-format MiniMax H3 NF4 video VAE. / "
                 "加载 DiffSynth 格式的 MiniMax H3 NF4 视频 VAE。"
@@ -786,6 +807,9 @@ class MiniMaxH3XNF4VideoVAELoader(io.ComfyNode):
                 io.Combo.Input(
                     "vae_name",
                     options=folder_paths.get_filename_list("vae"),
+                    tooltip=(
+                        "The NF4 video VAE, saved as video_vae_nf4.safetensors in models/vae."
+                    ),
                 )
             ],
             outputs=[io.Vae.Output()],
@@ -804,8 +828,13 @@ class MiniMaxH3XNF4AudioVAELoader(io.ComfyNode):
 
         return io.Schema(
             node_id="MiniMaxH3XNF4AudioVAELoader",
+            is_experimental=True,
             display_name="MiniMax H3 NF4 Audio VAE Loader / NF4 音频 VAE 加载",
             category="model/loaders/minimax",
+            search_aliases=[
+                "h3", "minimax", "nf4", "bitsandbytes", "4bit", "audio vae",
+                "vae", "loader", "音频 VAE", "量化",
+            ],
             description=(
                 "Load the DiffSynth-format MiniMax H3 NF4 audio VAE. / "
                 "加载 DiffSynth 格式的 MiniMax H3 NF4 音频 VAE。"
@@ -814,6 +843,9 @@ class MiniMaxH3XNF4AudioVAELoader(io.ComfyNode):
                 io.Combo.Input(
                     "vae_name",
                     options=folder_paths.get_filename_list("vae"),
+                    tooltip=(
+                        "The NF4 audio VAE, saved as audio_vae_nf4.safetensors in models/vae."
+                    ),
                 )
             ],
             outputs=[io.Vae.Output()],

@@ -354,6 +354,10 @@ class MiniMaxH3XPromptLint(io.ComfyNode):
             node_id="MiniMaxH3XPromptLint",
             display_name="MiniMax H3 Prompt Lint / 提示词检查",
             category="model/conditioning/minimax",
+            search_aliases=[
+                "h3", "minimax", "prompt lint", "prompt check",
+                "validate prompt", "linter", "提示词检查", "提示词", "检查", "校验",
+            ],
             description=(
                 "Check an H3 prompt against MiniMax's documented format rules. "
                 "Deterministic -- no LLM, no rewriting. Passes the prompt through "

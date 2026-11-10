@@ -69,9 +69,15 @@ class MiniMaxH3XAudioReroll(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="MiniMaxH3XAudioReroll",
+            is_experimental=True,
             display_name=(
                 "MiniMax H3 Audio Reroll (Experimental) / 音频重生成（实验性）"),
             category="model/conditioning/minimax",
+            search_aliases=[
+                "h3", "minimax", "audio reroll", "new soundtrack",
+                "regenerate audio", "resample audio", "sound", "音频重生成",
+                "重新生成音频", "音频", "配乐",
+            ],
             description=(
                 "Experimental: condition a fresh H3 sampling run on an already-generated video "
                 "latent, so a new soundtrack can be produced without re-authoring "
