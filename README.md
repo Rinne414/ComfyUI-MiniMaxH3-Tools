@@ -256,7 +256,7 @@ All 17 nodes:
 | MiniMax H3 NF4 Text Encoder Loader (Experimental) | Loads DiffSynth's NF4 Qwen3-VL encoder |
 | MiniMax H3 NF4 Video VAE Loader (Experimental) | Loads DiffSynth's NF4 video VAE |
 | MiniMax H3 NF4 Audio VAE Loader (Experimental) | Loads DiffSynth's NF4 audio VAE |
-| MiniMax H3 Image Encode (Low RAM) | Encodes a prompt and pictures, then frees the text encoder |
+| MiniMax H3 Image Encode (Low RAM) | Encodes a prompt and pictures, then frees the text encoder. Its report notes when the prompt's `<Picture n>` references and the connected pictures disagree |
 | MiniMax H3 Image Prompt Expander | Experimental. Expands a short idea into a long English description |
 | MiniMax H3 Image Size | Canvas presets (aspect ratio and megapixels) and the empty image latent |
 | MiniMax H3 Save Conditioning | Saves an encoded prompt to `output/conditioning` |

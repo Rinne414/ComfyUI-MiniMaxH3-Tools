@@ -129,3 +129,67 @@ def test_expander_uses_the_edit_instructions_when_pictures_are_connected(
         "make it blue", True, "m.safetensors", 0, images={"image_1": picture}
     )
     assert kinds == ["edit"]
+
+
+def _encode_with_fakes(monkeypatch: pytest.MonkeyPatch, prompt: str, images):
+    import torch
+
+    import image_encode
+
+    cond = [[torch.zeros(1, 2, 3), {}]]
+    monkeypatch.setattr(image_encode, "encode_once", lambda *args: cond)
+    monkeypatch.setattr(image_encode, "_available_mb", lambda: 1000)
+    return image_encode.MiniMaxH3XImageEncodeLowRAM.execute(
+        "m.safetensors", prompt, use_cache=False, images=images
+    )
+
+
+def test_encode_report_warns_when_the_prompt_names_a_missing_picture(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import torch
+
+    picture = torch.zeros(1, 8, 8, 3)
+    report = _encode_with_fakes(
+        monkeypatch, "Put <Picture 3> into <Picture 1>", {"image_1": picture, "image_2": picture}
+    ).result[2]
+    assert report.endswith("prompt mentions Picture 3 but only 2 pictures are connected")
+
+
+def test_encode_report_warns_about_an_unnamed_picture_and_stays_quiet_when_consistent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import torch
+
+    picture = torch.zeros(1, 8, 8, 3)
+    two = {"image_1": picture, "image_2": picture}
+    warned = _encode_with_fakes(monkeypatch, "Edit <Picture 1>", two).result[2]
+    assert "never mentions Picture 2" in warned
+    quiet = _encode_with_fakes(monkeypatch, "Put <Picture 2> into <Picture 1>", two).result[2]
+    assert "mentions" not in quiet and "never" not in quiet
+    text_to_image = _encode_with_fakes(monkeypatch, "a red fox", None).result[2]
+    assert "mentions" not in text_to_image
+
+
+def test_encode_still_runs_when_the_references_disagree(monkeypatch: pytest.MonkeyPatch) -> None:
+    output = _encode_with_fakes(monkeypatch, "<Picture 5>", None)
+    assert output.result[0] and output.result[1]
+
+
+def test_encode_report_warns_on_a_cache_hit_too(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    import torch
+
+    import image_encode
+
+    cond = [[torch.zeros(1, 2, 3), {}]]
+    monkeypatch.setattr(image_encode, "encoder_path", lambda name: str(tmp_path / name))
+    monkeypatch.setattr(image_encode, "file_identity", lambda path: "te|1|2")
+    monkeypatch.setattr(image_encode, "cache_folder", lambda: str(tmp_path))
+    monkeypatch.setattr(image_encode, "cache_summary", lambda: "cache folder")
+    monkeypatch.setattr(image_encode, "read_cache", lambda path: (cond, "cache hit"))
+    report = image_encode.MiniMaxH3XImageEncodeLowRAM.execute(
+        "m.safetensors", "Use <Picture 2>", use_cache=True, images=None
+    ).result[2]
+    assert report == "cache hit; cache folder; prompt mentions Picture 2 but no pictures are connected"

@@ -174,7 +174,7 @@ NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁�
 | MiniMax H3 NF4 Text Encoder Loader（NF4 文本编码器加载，实验性） | 加载 DiffSynth 的 NF4 Qwen3-VL 编码器 |
 | MiniMax H3 NF4 Video VAE Loader（NF4 视频 VAE 加载，实验性） | 加载 DiffSynth 的 NF4 视频 VAE |
 | MiniMax H3 NF4 Audio VAE Loader（NF4 音频 VAE 加载，实验性） | 加载 DiffSynth 的 NF4 音频 VAE |
-| MiniMax H3 Image Encode (Low RAM)（图像提示词编码，低内存） | 编码提示词和图片，然后释放文本编码器 |
+| MiniMax H3 Image Encode (Low RAM)（图像提示词编码，低内存） | 编码提示词和图片，然后释放文本编码器。当提示词中的 `<Picture n>` 与已连接的图片数量不一致时，报告里会加一行说明 |
 | MiniMax H3 Image Prompt Expander（图像提示词扩写） | 实验性。把简短想法扩写成详细的英文描述 |
 | MiniMax H3 Image Size（图像尺寸） | 画布预设（长宽比和百万像素）以及空的图像潜空间 |
 | MiniMax H3 Save Conditioning（保存条件） | 把编码后的提示词保存到 `output/conditioning` |

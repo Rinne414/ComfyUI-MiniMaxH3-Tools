@@ -36,6 +36,7 @@ if __package__:
         free_other_models,
         load_text_encoder,
     )
+    from .image_picture_refs import connected_pictures
     from .image_pinning import pinning_disabled
 else:
     from image_cache import cache_key, file_identity, read_text_cache, write_text_cache
@@ -47,6 +48,7 @@ else:
         free_other_models,
         load_text_encoder,
     )
+    from image_picture_refs import connected_pictures
     from image_pinning import pinning_disabled
 
 DEFAULT_MODEL = "qwen3.5_9b_w4a8_gptq.safetensors"
@@ -123,11 +125,6 @@ def generate(
             clip = None
     collect_released_memory()
     return text or ""
-
-
-def _pictures(images) -> list:
-    names = sorted(images or {}, key=lambda n: int(n.rsplit("_", 1)[-1]))
-    return [images[n] for n in names if images[n] is not None]
 
 
 def _schema_inputs() -> list:
@@ -244,7 +241,7 @@ class MiniMaxH3XImagePromptExpand(io.ComfyNode):
                 "expansion off: the prompt is used unchanged, no model loaded",
                 "",
             )
-        pictures = _pictures(images)
+        pictures = connected_pictures(images)
         try:
             instructions = find_instructions(
                 "edit" if pictures else "t2i",

@@ -22,7 +22,10 @@ examples and a Chinese README.
   - `MiniMax H3 Image Encode (Low RAM)` loads the 27 GB text encoder, encodes the
     prompt and up to 16 pictures, and frees the encoder before the DiT loads. An
     unchanged prompt is read from `output/h3image_encode_cache` and the encoder
-    does not load. `.gguf` encoders are experimental and unverified.
+    does not load. `.gguf` encoders are experimental and unverified. Its report
+    adds one line when the prompt's `<Picture n>` references and the connected
+    pictures disagree, for example "prompt mentions Picture 3 but only 2 pictures
+    are connected"; it never blocks the run.
   - `MiniMax H3 Image Size` offers the model card's aspect ratios at 4, 8, 16 and
     20 MP, follows a connected picture's shape, and makes the empty latent.
   - `MiniMax H3 Image Prompt Expander` (experimental) turns a short idea into the

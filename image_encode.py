@@ -30,6 +30,7 @@ if __package__:
         is_gguf,
         vram_problem,
     )
+    from .image_picture_refs import append_note, connected_pictures
     from .image_pinning import pinning_disabled
 else:
     from conditioning_io import save_conditioning, zero_conditioning
@@ -41,6 +42,7 @@ else:
         is_gguf,
         vram_problem,
     )
+    from image_picture_refs import append_note, connected_pictures
     from image_pinning import pinning_disabled
 
 # the encode ignores the canvas size; the latent comes from the size node instead
@@ -214,7 +216,7 @@ class MiniMaxH3XImageEncodeLowRAM(io.ComfyNode):
     def execute(
         cls, clip_name, prompt, use_cache=True, vae=None, images=None
     ) -> io.NodeOutput:
-        pictures = [images[n] for n in sorted(images or {}) if images[n] is not None]
+        pictures = connected_pictures(images)
         path = None
         note = "cache off"
         if use_cache:
@@ -227,9 +229,10 @@ class MiniMaxH3XImageEncodeLowRAM(io.ComfyNode):
             path = os.path.join(cache_folder(), f"{key}.safetensors")
             cond, note = read_cache(path)
             if cond is not None:
-                return io.NodeOutput(
-                    cond, zero_conditioning(cond), f"{note}; {cache_summary()}"
+                report = append_note(
+                    f"{note}; {cache_summary()}", prompt, len(pictures)
                 )
+                return io.NodeOutput(cond, zero_conditioning(cond), report)
         before = _available_mb()
         start = time.monotonic()
         cond = encode_once(clip_name, prompt, vae, images)
@@ -242,6 +245,7 @@ class MiniMaxH3XImageEncodeLowRAM(io.ComfyNode):
         )
         if path is not None:
             report += "; " + cache_summary()
+        report = append_note(report, prompt, len(pictures))
         return io.NodeOutput(cond, zero_conditioning(cond), report)
 
 
