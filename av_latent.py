@@ -11,11 +11,12 @@ These nodes let a workflow reach one stream without disturbing the other.
 
 Split emits ordinary {"samples": tensor} dicts so downstream tooling works, and
 tags them so Join can tell a video latent from an audio one instead of trusting
-connection order.
+connection order. A noise_mask travels with its stream through every node.
 """
 
 import comfy.nested_tensor
 import comfy.utils
+import torch
 from comfy_api.latest import ComfyExtension, io, ui
 
 FPS = 24
@@ -28,6 +29,7 @@ LATENT_SPATIAL_DIVISOR = 16  # VAE spatial compression
 TOKEN_SPATIAL_DIVISOR = 32  # after the DiT's 1x2x2 patchify
 
 STREAM_KEY = "minimax_h3_stream"
+MASK_KEY = "noise_mask"
 
 
 def frames_from_latent_t(latent_t):
@@ -68,8 +70,63 @@ def unpack_av(latent):
     return parts[0], parts[1]
 
 
-def pack_av(video, audio):
-    return {"samples": comfy.nested_tensor.NestedTensor((video, audio))}
+def unpack_masks(latent):
+    """(video_mask, audio_mask) from an H3 latent dict, None where there is none.
+
+    Core's sampler reads a NestedTensor noise_mask as one mask per stream and a
+    plain tensor as the video stream's mask, with the audio fully denoised.
+    """
+    mask = latent.get(MASK_KEY)
+    if mask is None:
+        return None, None
+    if not isinstance(mask, comfy.nested_tensor.NestedTensor):
+        return mask, None
+    parts = mask.unbind()
+    if len(parts) != 2:
+        raise ValueError("expected a 2-stream noise_mask, got %d streams" % len(parts))
+    return parts[0], parts[1]
+
+
+def pack_av(video, audio, video_mask=None, audio_mask=None):
+    """An H3 latent dict. With any mask, a stream without one gets ones (fully
+    denoised), the same as core's Concat AV Latent node."""
+    latent = {"samples": comfy.nested_tensor.NestedTensor((video, audio))}
+    if video_mask is not None or audio_mask is not None:
+        latent[MASK_KEY] = comfy.nested_tensor.NestedTensor(
+            (
+                torch.ones_like(video) if video_mask is None else video_mask,
+                torch.ones_like(audio) if audio_mask is None else audio_mask,
+            )
+        )
+    return latent
+
+
+def keep_mask(output, source):
+    """Carry the source latent's noise_mask, unchanged, into a node's output."""
+    if source.get(MASK_KEY) is not None:
+        output[MASK_KEY] = source[MASK_KEY]
+    return output
+
+
+def stream_latent(samples, stream, mask):
+    latent = {"samples": samples, STREAM_KEY: stream}
+    if mask is not None:
+        latent[MASK_KEY] = mask
+    return latent
+
+
+def trim_mask(mask, samples, dim, length):
+    """The first `length` steps of a stream's mask along `dim`.
+
+    Masks keep their own shape until sampling resizes them to the latent. One
+    whose time axis is not the latent's is resized onto the latent grid first,
+    as core does when it fits audio, so the cut lands on the same frames.
+    """
+    if mask is None:
+        return None
+    if mask.ndim != samples.ndim or mask.shape[dim] != samples.shape[dim]:
+        mask = comfy.utils.reshape_mask(mask, samples.shape)
+    return mask.narrow(dim, 0, length).contiguous()
 
 
 class MiniMaxH3XSplitAV(io.ComfyNode):
@@ -104,9 +161,10 @@ class MiniMaxH3XSplitAV(io.ComfyNode):
     @classmethod
     def execute(cls, latent) -> io.NodeOutput:
         video, audio = unpack_av(latent)
+        video_mask, audio_mask = unpack_masks(latent)
         return io.NodeOutput(
-            {"samples": video, STREAM_KEY: "video"},
-            {"samples": audio, STREAM_KEY: "audio"},
+            stream_latent(video, "video", video_mask),
+            stream_latent(audio, "audio", audio_mask),
         )
 
 
@@ -212,7 +270,7 @@ class MiniMaxH3XJoinAV(io.ComfyNode):
                     % (latent_t, frames, expected_audio_t, audio_t)
                 )
 
-        return io.NodeOutput(pack_av(v, a))
+        return io.NodeOutput(pack_av(v, a, video.get(MASK_KEY), audio.get(MASK_KEY)))
 
 
 class MiniMaxH3XLatentInfo(io.ComfyNode):
@@ -358,7 +416,7 @@ class MiniMaxH3XUpscaleVideoLatent(io.ComfyNode):
 
         b, c, t, lh, lw = video.shape
         if (lh, lw) == (target_h, target_w):
-            return io.NodeOutput(pack_av(video, audio))
+            return io.NodeOutput(keep_mask(pack_av(video, audio), latent))
 
         # common_upscale wants [B,C,H,W]; fold time into batch so every frame is
         # resized identically and no temporal blending occurs.
@@ -368,7 +426,8 @@ class MiniMaxH3XUpscaleVideoLatent(io.ComfyNode):
         )
         resized = flat.reshape(b, t, c, target_h, target_w).movedim(1, 2)
 
-        return io.NodeOutput(pack_av(resized.contiguous(), audio))
+        # The mask keeps its own shape; sampling resizes it to the new latent.
+        return io.NodeOutput(keep_mask(pack_av(resized.contiguous(), audio), latent))
 
 
 class MiniMaxH3XTemporalTrim(io.ComfyNode):
@@ -446,10 +505,13 @@ class MiniMaxH3XTemporalTrim(io.ComfyNode):
                 % (audio.shape[3], new_audio_t)
             )
 
+        video_mask, audio_mask = unpack_masks(latent)
         return io.NodeOutput(
             pack_av(
                 video[:, :, :new_latent_t].contiguous(),
                 audio[:, :, :, :new_audio_t].contiguous(),
+                trim_mask(video_mask, video, 2, new_latent_t),
+                trim_mask(audio_mask, audio, 3, new_audio_t),
             ),
             want,
         )

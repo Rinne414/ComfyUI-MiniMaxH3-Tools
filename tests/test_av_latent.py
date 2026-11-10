@@ -14,6 +14,8 @@ import torch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import comfy.nested_tensor  # noqa: E402
+import comfy.utils  # noqa: E402
 from av_latent import (  # noqa: E402
     MiniMaxH3XJoinAV,
     MiniMaxH3XLatentInfo,
@@ -262,3 +264,112 @@ def test_no_input_mutation():
     v1, a1 = unpack_av(src)
     assert torch.equal(v0_clone, v1), "video stream was mutated in place"
     assert torch.equal(a0_clone, a1), "audio stream was mutated in place"
+
+
+# noise_mask: core's sampler reads a NestedTensor mask as one mask per stream and
+# a plain tensor as the video stream's mask (audio fully denoised). Masks keep
+# their own shape until sampling resizes them with comfy.utils.reshape_mask.
+
+
+def masked_latent(frames=243, seed=3, plain=False):
+    latent = make_latent(frames=frames, seed=seed)
+    video, audio = unpack_av(latent)
+    generator = torch.Generator().manual_seed(seed)
+    video_mask = torch.rand((1, 1) + tuple(video.shape[2:]), generator=generator)
+    audio_mask = torch.rand((1, 1) + tuple(audio.shape[2:]), generator=generator)
+    if plain:
+        latent["noise_mask"] = video_mask
+    else:
+        latent["noise_mask"] = comfy.nested_tensor.NestedTensor(
+            (video_mask, audio_mask)
+        )
+    return latent, video_mask, audio_mask
+
+
+def stream_masks(latent):
+    return latent["noise_mask"].unbind()
+
+
+def test_split_gives_each_stream_its_mask():
+    latent, video_mask, audio_mask = masked_latent()
+    video, audio = MiniMaxH3XSplitAV.execute(latent).result
+    assert torch.equal(video["noise_mask"], video_mask)
+    assert torch.equal(audio["noise_mask"], audio_mask)
+
+
+def test_split_gives_a_plain_mask_to_the_video_stream_only():
+    latent, video_mask, _ = masked_latent(plain=True)
+    video, audio = MiniMaxH3XSplitAV.execute(latent).result
+    assert torch.equal(video["noise_mask"], video_mask)
+    assert "noise_mask" not in audio
+
+
+def test_join_recombines_masks_and_fills_a_missing_one_with_ones():
+    latent, video_mask, audio_mask = masked_latent()
+    video, audio = MiniMaxH3XSplitAV.execute(latent).result
+    joined = MiniMaxH3XJoinAV.execute(video, audio).result[0]
+    masks = stream_masks(joined)
+    assert torch.equal(masks[0], video_mask) and torch.equal(masks[1], audio_mask)
+
+    del audio["noise_mask"]
+    masks = stream_masks(MiniMaxH3XJoinAV.execute(video, audio).result[0])
+    assert torch.equal(masks[0], video_mask)
+    assert torch.equal(masks[1], torch.ones_like(audio["samples"]))
+
+
+def test_trim_cuts_both_masks_on_the_frame_grid():
+    latent, video_mask, audio_mask = masked_latent(frames=243)
+    out, frames = MiniMaxH3XTemporalTrim.execute(latent, 5.0).result
+    video, audio = unpack_av(out)
+    masks = stream_masks(out)
+
+    assert frames == 124
+    assert masks[0].shape[2] == video.shape[2] == video_latent_t(124)
+    assert masks[1].shape[3] == audio.shape[3] == audio_t_for_frames(124)
+    assert torch.equal(masks[0], video_mask[:, :, : video.shape[2]])
+    assert torch.equal(masks[1], audio_mask[:, :, :, : audio.shape[3]])
+
+
+def test_trim_puts_a_mask_on_the_latent_grid_before_cutting():
+    latent, _, _ = masked_latent(frames=243)
+    video, _ = unpack_av(latent)
+    per_frame = torch.rand(243, video.shape[3], video.shape[4])  # one mask per frame
+    latent["noise_mask"] = per_frame
+
+    out, _ = MiniMaxH3XTemporalTrim.execute(latent, 5.0).result
+    kept = video_latent_t(124)
+    expected = comfy.utils.reshape_mask(per_frame, video.shape)[:, :, :kept]
+    masks = stream_masks(out)
+    assert torch.equal(masks[0], expected)
+    assert torch.equal(masks[1], torch.ones_like(unpack_av(out)[1]))
+
+
+def test_masked_results_resize_to_their_latents_like_the_sampler_does():
+    latent, _, _ = masked_latent(frames=243)
+    for node_output in (
+        MiniMaxH3XTemporalTrim.execute(latent, 5.0).result[0],
+        MiniMaxH3XUpscaleVideoLatent.execute(latent, 1216, 672, "bicubic").result[0],
+    ):
+        streams = unpack_av(node_output)
+        for mask, samples in zip(stream_masks(node_output), streams):
+            assert comfy.utils.reshape_mask(mask, samples.shape).shape == samples.shape
+
+
+def test_upscale_keeps_the_mask():
+    latent, video_mask, audio_mask = masked_latent()
+    for width, height in ((1216, 672), (864, 480)):
+        out = MiniMaxH3XUpscaleVideoLatent.execute(latent, width, height, "bicubic")
+        assert out.result[0]["noise_mask"] is latent["noise_mask"]
+
+
+def test_nodes_add_no_mask_when_there_is_none():
+    latent = make_latent(frames=243)
+    video, audio = MiniMaxH3XSplitAV.execute(latent).result
+    outputs = [
+        video,
+        audio,
+        MiniMaxH3XJoinAV.execute(video, audio).result[0],
+        MiniMaxH3XTemporalTrim.execute(latent, 5.0).result[0],
+        MiniMaxH3XUpscaleVideoLatent.execute(latent, 1216, 672, "bicubic").result[0],
+    ]
+    assert all("noise_mask" not in output for output in outputs)
