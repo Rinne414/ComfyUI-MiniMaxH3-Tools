@@ -15,9 +15,15 @@ import torch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from av_latent import (  # noqa: E402
-    MiniMaxH3XJoinAV, MiniMaxH3XLatentInfo, MiniMaxH3XSplitAV,
-    MiniMaxH3XTemporalTrim, MiniMaxH3XUpscaleVideoLatent,
-    audio_t_for_frames, frames_from_latent_t, pack_av, unpack_av,
+    MiniMaxH3XJoinAV,
+    MiniMaxH3XLatentInfo,
+    MiniMaxH3XSplitAV,
+    MiniMaxH3XTemporalTrim,
+    MiniMaxH3XUpscaleVideoLatent,
+    audio_t_for_frames,
+    frames_from_latent_t,
+    pack_av,
+    unpack_av,
     video_latent_t,
 )
 
@@ -155,14 +161,17 @@ def test_upscale_does_not_blend_frames():
     """Folding time into batch must keep frames independent."""
     lt = video_latent_t(124)
     video = torch.zeros(1, 24, lt, 30, 54)
-    video[:, :, 3] = 1.0                      # one bright frame
+    video[:, :, 3] = 1.0  # one bright frame
     audio = torch.randn(1, 32, 2, audio_t_for_frames(124))
     out = MiniMaxH3XUpscaleVideoLatent.execute(
-        pack_av(video, audio), 1216, 672, "nearest-exact").result[0]
+        pack_av(video, audio), 1216, 672, "nearest-exact"
+    ).result[0]
     got, _ = unpack_av(out)
     assert got[:, :, 3].min() == 1.0
     for t in (2, 4):
-        assert got[:, :, t].max() == 0.0, "frame %d picked up signal from its neighbour" % t
+        assert got[:, :, t].max() == 0.0, (
+            "frame %d picked up signal from its neighbour" % t
+        )
 
 
 def test_trim_moves_both_streams():
@@ -180,7 +189,11 @@ def test_trim_snaps_to_the_frame_grid():
     # duration, then clamped to what the source holds.
     for secs, expected in ((5.0, 124), (4.5, 124), (6.0, 158), (7.0, 175)):
         _, frames = MiniMaxH3XTemporalTrim.execute(src, secs).result
-        assert frames == expected, "%.1f s gave %d, expected %d" % (secs, frames, expected)
+        assert frames == expected, "%.1f s gave %d, expected %d" % (
+            secs,
+            frames,
+            expected,
+        )
         assert frames % 17 == 5
         assert frames <= 243
 
@@ -190,8 +203,10 @@ def test_trim_result_is_a_valid_pair():
     out, frames = MiniMaxH3XTemporalTrim.execute(src, 7.0).result
     video, audio = unpack_av(out)
     # Join in strict mode is the real validator -- it must accept the result.
-    MiniMaxH3XJoinAV.execute({"samples": video, "minimax_h3_stream": "video"},
-                             {"samples": audio, "minimax_h3_stream": "audio"})
+    MiniMaxH3XJoinAV.execute(
+        {"samples": video, "minimax_h3_stream": "video"},
+        {"samples": audio, "minimax_h3_stream": "audio"},
+    )
 
 
 def test_trim_cannot_extend():
@@ -205,8 +220,8 @@ def test_trim_preserves_content_prefix():
     v0, a0 = unpack_av(src)
     out, _ = MiniMaxH3XTemporalTrim.execute(src, 5.0).result
     v1, a1 = unpack_av(out)
-    assert torch.equal(v0[:, :, :v1.shape[2]], v1)
-    assert torch.equal(a0[:, :, :, :a1.shape[3]], a1)
+    assert torch.equal(v0[:, :, : v1.shape[2]], v1)
+    assert torch.equal(a0[:, :, :, : a1.shape[3]], a1)
 
 
 def test_latent_info_reports_correct_geometry():
@@ -214,14 +229,14 @@ def test_latent_info_reports_correct_geometry():
     report, frames, tokens = MiniMaxH3XLatentInfo.execute(src).result
     assert frames == 243
     assert tokens == 72 * (672 // 32) * (1216 // 32)
-    assert tokens == 57456          # matches the measured calibration row
+    assert tokens == 57456  # matches the measured calibration row
     assert "1216x672" in report
     assert "MISMATCH" not in report
 
 
 def test_latent_info_flags_mismatch():
     video = torch.randn(1, 24, 37, 30, 54)
-    audio = torch.randn(1, 32, 2, 405)          # wrong: 37 implies 207
+    audio = torch.randn(1, 32, 2, 405)  # wrong: 37 implies 207
     report, _, _ = MiniMaxH3XLatentInfo.execute(pack_av(video, audio)).result
     assert "MISMATCH" in report
 

@@ -85,8 +85,14 @@ def _nf4_parameter_type() -> type[torch.nn.Parameter]:
             if func is torch.empty_like and args and isinstance(args[0], cls):
                 source = args[0]
                 options = {} if kwargs is None else kwargs
-                dtype = source.dtype if options.get("dtype") is None else options["dtype"]
-                device = source.device if options.get("device") is None else options["device"]
+                dtype = (
+                    source.dtype if options.get("dtype") is None else options["dtype"]
+                )
+                device = (
+                    source.device
+                    if options.get("device") is None
+                    else options["device"]
+                )
                 device = torch.device(device)
                 return cls(
                     torch.empty(source.shape, dtype=dtype, device=device),
@@ -182,7 +188,9 @@ class _NF4Linear(torch.nn.Module):
         self.bias_function = []
         self.register_parameter(
             "load_anchor",
-            torch.nn.Parameter(torch.empty(1, device=device, dtype=dtype), requires_grad=False),
+            torch.nn.Parameter(
+                torch.empty(1, device=device, dtype=dtype), requires_grad=False
+            ),
         )
 
     def _load_from_state_dict(
@@ -221,7 +229,13 @@ class _NF4Linear(torch.nn.Module):
                     device=anchor.device,
                     module=self,
                 )
-            except (RuntimeError, ValueError, TypeError, KeyError, AttributeError) as error:
+            except (
+                RuntimeError,
+                ValueError,
+                TypeError,
+                KeyError,
+                AttributeError,
+            ) as error:
                 error_msgs.append(
                     f"failed to restore NF4 weight '{weight_key}' on {anchor.device}: {error}"
                 )
@@ -299,7 +313,9 @@ class _NF4Linear(torch.nn.Module):
             if quant_state is None:
                 quant_state = self.quant_state
             if quant_state is None:
-                raise RuntimeError("loaded NF4 weight has no BitsAndBytes quantization state")
+                raise RuntimeError(
+                    "loaded NF4 weight has no BitsAndBytes quantization state"
+                )
             try:
                 output = bitsandbytes.matmul_4bit(
                     inputs,
@@ -486,11 +502,15 @@ def _replace_nf4_dit_attentions(root: torch.nn.Module) -> int:
         setattr(parent, child_name, _NF4DiTAttention(module))
         replaced += 1
     if replaced == 0:
-        raise RuntimeError("MiniMax H3 NF4 diffusion model contained no attention module")
+        raise RuntimeError(
+            "MiniMax H3 NF4 diffusion model contained no attention module"
+        )
     return replaced
 
 
-def _load_state_dict(path: str) -> tuple[dict[str, torch.Tensor], Mapping[str, str] | None]:
+def _load_state_dict(
+    path: str,
+) -> tuple[dict[str, torch.Tensor], Mapping[str, str] | None]:
     import comfy.utils
 
     loaded, metadata = comfy.utils.load_torch_file(
@@ -549,7 +569,10 @@ def load_nf4_diffusion_model(path: str):
     model_config = comfy.model_detection.model_config_from_unet(
         probe, "", metadata=metadata
     )
-    if model_config is None or model_config.unet_config.get("image_model") != "minimax_h3":
+    if (
+        model_config is None
+        or model_config.unet_config.get("image_model") != "minimax_h3"
+    ):
         detected = None if model_config is None else model_config.unet_config
         raise ValueError(
             f"NF4 checkpoint '{path}' is not a detectable MiniMax H3 diffusion model; "
@@ -610,7 +633,9 @@ def _replace_quantized_linears(
         module_path = weight_key[: -len(".weight")]
         module = modules.get(module_path)
         if module is None:
-            raise ValueError(f"NF4 tensor '{weight_key}' has no matching ComfyUI module")
+            raise ValueError(
+                f"NF4 tensor '{weight_key}' has no matching ComfyUI module"
+            )
         if not isinstance(module, torch.nn.Linear):
             raise TypeError(
                 f"NF4 tensor '{weight_key}' maps to {type(module).__name__}, not Linear"
@@ -647,7 +672,9 @@ def _replace_nf4_audio_attentions(root: torch.nn.Module) -> int:
         setattr(parent, child_name, _NF4AudioCausalAttention(module))
         replaced += 1
     if replaced == 0:
-        raise RuntimeError("MiniMax H3 NF4 audio VAE contained no causal attention module")
+        raise RuntimeError(
+            "MiniMax H3 NF4 audio VAE contained no causal attention module"
+        )
     return replaced
 
 
@@ -724,8 +751,16 @@ class MiniMaxH3XNF4ModelLoader(io.ComfyNode):
             display_name="MiniMax H3 NF4 Model Loader",
             category="model/loaders/minimax",
             search_aliases=[
-                "h3", "minimax", "nf4", "bitsandbytes", "4bit",
-                "diffusion model", "unet", "loader", "模型加载", "量化",
+                "h3",
+                "minimax",
+                "nf4",
+                "bitsandbytes",
+                "4bit",
+                "diffusion model",
+                "unet",
+                "loader",
+                "模型加载",
+                "量化",
             ],
             description=(
                 "Load a DiffSynth-format MiniMax H3 NF4 diffusion model with "
@@ -760,12 +795,19 @@ class MiniMaxH3XNF4TextEncoderLoader(io.ComfyNode):
             display_name="MiniMax H3 NF4 Text Encoder Loader",
             category="model/loaders/minimax",
             search_aliases=[
-                "h3", "minimax", "nf4", "bitsandbytes", "4bit",
-                "text encoder", "qwen3-vl", "clip", "loader", "文本编码器", "量化",
+                "h3",
+                "minimax",
+                "nf4",
+                "bitsandbytes",
+                "4bit",
+                "text encoder",
+                "qwen3-vl",
+                "clip",
+                "loader",
+                "文本编码器",
+                "量化",
             ],
-            description=(
-                "Load the DiffSynth-format MiniMax H3 Qwen3-VL NF4 encoder."
-            ),
+            description=("Load the DiffSynth-format MiniMax H3 Qwen3-VL NF4 encoder."),
             inputs=[
                 io.Combo.Input(
                     "encoder_name",
@@ -795,12 +837,18 @@ class MiniMaxH3XNF4VideoVAELoader(io.ComfyNode):
             display_name="MiniMax H3 NF4 Video VAE Loader",
             category="model/loaders/minimax",
             search_aliases=[
-                "h3", "minimax", "nf4", "bitsandbytes", "4bit", "video vae",
-                "vae", "loader", "视频 VAE", "量化",
+                "h3",
+                "minimax",
+                "nf4",
+                "bitsandbytes",
+                "4bit",
+                "video vae",
+                "vae",
+                "loader",
+                "视频 VAE",
+                "量化",
             ],
-            description=(
-                "Load the DiffSynth-format MiniMax H3 NF4 video VAE."
-            ),
+            description=("Load the DiffSynth-format MiniMax H3 NF4 video VAE."),
             inputs=[
                 io.Combo.Input(
                     "vae_name",
@@ -830,12 +878,18 @@ class MiniMaxH3XNF4AudioVAELoader(io.ComfyNode):
             display_name="MiniMax H3 NF4 Audio VAE Loader",
             category="model/loaders/minimax",
             search_aliases=[
-                "h3", "minimax", "nf4", "bitsandbytes", "4bit", "audio vae",
-                "vae", "loader", "音频 VAE", "量化",
+                "h3",
+                "minimax",
+                "nf4",
+                "bitsandbytes",
+                "4bit",
+                "audio vae",
+                "vae",
+                "loader",
+                "音频 VAE",
+                "量化",
             ],
-            description=(
-                "Load the DiffSynth-format MiniMax H3 NF4 audio VAE."
-            ),
+            description=("Load the DiffSynth-format MiniMax H3 NF4 audio VAE."),
             inputs=[
                 io.Combo.Input(
                     "vae_name",
