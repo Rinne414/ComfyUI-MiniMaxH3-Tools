@@ -510,3 +510,15 @@ def test_edit_examples_load_the_stock_example_picture(filename: str) -> None:
     workflow = _load_workflow(WORKFLOW_DIRECTORY / filename)
     for loader in _node_by_type(workflow, "LoadImage"):
         assert loader["widgets_values"][0] == "example.png"
+
+
+def test_thumbnails_sit_next_to_their_workflow_and_stay_small() -> None:
+    """ComfyUI's Templates browser looks for <workflow name>.jpg beside the .json."""
+    thumbnails = sorted(WORKFLOW_DIRECTORY.glob("*.jpg"))
+    assert thumbnails
+    for path in thumbnails:
+        assert path.with_suffix(".json").is_file(), path.name
+        data = path.read_bytes()
+        assert data[:3] == b"\xff\xd8\xff", "%s is not a JPEG" % path.name
+        assert len(data) < 150_000, path.name
+        assert b"Exif" not in data[:64], "%s carries EXIF metadata" % path.name
