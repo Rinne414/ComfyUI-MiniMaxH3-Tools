@@ -303,39 +303,63 @@ class _NF4Linear(torch.nn.Module):
                 "LoRA and weight-function patches are not supported on MiniMax H3 "
                 "BitsAndBytes NF4 Linear layers"
             )
-
-        bias = None
-        if self.bias is not None:
-            bias = self.bias.to(device=inputs.device, dtype=inputs.dtype)
-
         if self.is_nf4:
-            bitsandbytes = _require_bitsandbytes()
-            stored_weight = self.weight
-            weight = stored_weight
-            moved = weight.device != inputs.device
-            if moved:
-                weight = weight.to(inputs.device)
-            quant_state = getattr(weight, "quant_state", None)
-            if quant_state is None:
-                quant_state = self.quant_state
-            if quant_state is None:
-                raise RuntimeError(
-                    "loaded NF4 weight has no BitsAndBytes quantization state"
-                )
-            try:
-                output = bitsandbytes.matmul_4bit(
-                    inputs,
-                    weight.t(),
-                    bias=bias,
-                    quant_state=quant_state,
-                )
-            finally:
-                if moved:
-                    self.weight = weight.to(stored_weight.device)
-            return output.to(dtype=inputs.dtype)
+            return self._forward_nf4(inputs)
+        return self._forward_dense(inputs)
 
-        weight = self.weight.to(device=inputs.device, dtype=inputs.dtype)
-        return functional.linear(inputs, weight, bias)
+    # Weights reach the compute device only through core's cast path, as for
+    # core's own layers: it stages them through dynamic VRAM, prefetch, pinned
+    # memory or offload streams, and the stored parameters are never replaced.
+
+    def _forward_dense(self, inputs: torch.Tensor) -> torch.Tensor:
+        import comfy.ops
+
+        weight, bias, offload = comfy.ops.cast_bias_weight(
+            self, inputs, offloadable=True
+        )
+        try:
+            return functional.linear(inputs, weight, bias)
+        finally:
+            comfy.ops.uncast_bias_weight(self, weight, bias, offload)
+
+    def _forward_nf4(self, inputs: torch.Tensor) -> torch.Tensor:
+        import comfy.ops
+
+        bitsandbytes = _require_bitsandbytes()
+        # Keep the stored dtype: the weight is packed 4-bit codes, not numbers.
+        packed, bias, offload = comfy.ops.cast_bias_weight(
+            self,
+            inputs,
+            dtype=self.weight.dtype,
+            bias_dtype=inputs.dtype,
+            offloadable=True,
+        )
+        try:
+            output = bitsandbytes.matmul_4bit(
+                inputs,
+                packed.t(),
+                bias=bias,
+                quant_state=self._quant_state_on(packed.device),
+            )
+        finally:
+            comfy.ops.uncast_bias_weight(self, packed, bias, offload)
+        return output.to(dtype=inputs.dtype)
+
+    def _quant_state_on(self, device: torch.device) -> QuantState:
+        """The quantization state on `device`; copies it there, never moves it."""
+        states = [
+            state
+            for state in (getattr(self.weight, "quant_state", None), self.quant_state)
+            if state is not None
+        ]
+        if not states:
+            raise RuntimeError(
+                "loaded NF4 weight has no BitsAndBytes quantization state"
+            )
+        for state in states:
+            if state.absmax.device == device:
+                return state
+        return type(states[0]).from_dict(states[0].as_dict(packed=False), device)
 
     def set_weight(
         self,

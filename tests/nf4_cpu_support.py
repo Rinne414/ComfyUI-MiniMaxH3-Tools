@@ -104,15 +104,14 @@ def _fake_case(in_features: int, out_features: int, bias: bool) -> NF4Case:
     module.weight = torch.nn.Parameter(packed.clone(), requires_grad=False)
     module.quant_state = FakeQuantState(dense, packed.clone())
     module.is_nf4 = True
-    if bias:
-        module.bias = torch.nn.Parameter(
-            torch.randn(out_features, generator=generator), requires_grad=False
-        )
+    bias_value = torch.randn(out_features, generator=generator) if bias else None
+    if bias_value is not None:
+        module.bias = torch.nn.Parameter(bias_value.clone(), requires_grad=False)
     module.register_parameter("load_anchor", None)
 
     def reference(inputs: torch.Tensor) -> torch.Tensor:
-        bias_value = None if module.bias is None else module.bias.to(inputs.dtype)
-        return functional.linear(inputs, dense.to(inputs.dtype), bias_value)
+        bias_input = None if bias_value is None else bias_value.to(inputs.dtype)
+        return functional.linear(inputs, dense.to(inputs.dtype), bias_input)
 
     return NF4Case("fake", module, packed, reference, FakeBitsAndBytes())
 
@@ -230,11 +229,11 @@ def dynamic_patcher(model: torch.nn.Module, monkeypatch):
 
 
 def offload_to_pinned_host(module: torch.nn.Module) -> torch.Tensor:
-    """Move the module's weights out of RAM the way dynamic VRAM sees them.
+    """Take the module's weights out of RAM the way dynamic VRAM holds them.
 
-    The parameters become file-backed meta tensors and their bytes sit in a
-    pinned host buffer, so a forward has to take them through core's cast path.
-    Returns that buffer.
+    The parameters become file-backed meta tensors and their bytes sit in the
+    module's pinned host buffer, so a forward can only reach them through core's
+    cast path. Call before ModelPatcherDynamic.load(). Returns the buffer.
     """
     tensors = [
         module.weight.detach(),
@@ -253,13 +252,24 @@ def offload_to_pinned_host(module: torch.nn.Module) -> torch.Tensor:
                 None, threading.Lock(), 0, tensor.numel() * tensor.element_size()
             )
         )
-        attributes = {
-            key: value
-            for key, value in vars(getattr(module, name)).items()
-            if key == "_model_dtype"
-        }
         setattr(module, name, torch.nn.Parameter(offloaded, requires_grad=False))
-        for key, value in attributes.items():
-            setattr(getattr(module, name), key, value)
     module._pins = {"weights": {"pin": pin, "registered": True}}
     return pin
+
+
+def weight_sized_tensors(module: torch.nn.Module, nbytes: int) -> list[str]:
+    """Names of module attributes, outside core's pinned buffer, holding a host
+    tensor at least `nbytes` large: a second host copy of a weight shows up here."""
+    found = []
+    for name, value in vars(module).items():
+        if name == "_pins":
+            continue
+        values = value.items() if isinstance(value, dict) else [(name, value)]
+        for key, item in values:
+            if (
+                isinstance(item, torch.Tensor)
+                and item.device.type == "cpu"
+                and item.numel() * item.element_size() >= nbytes
+            ):
+                found.append(str(key))
+    return found
