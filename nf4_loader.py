@@ -167,6 +167,12 @@ def _nf4_parameter_type() -> type[torch.nn.Parameter]:
 class _NF4Linear(torch.nn.Module):
     """Linear shell that accepts full-precision or pre-quantized BnB weights."""
 
+    # Core reads the attributes of comfy.ops.CastWeightBiasOp on every layer that
+    # has comfy_cast_weights. None means "not a member of a CombinedLinear group";
+    # core's CombinedLinear overwrites it on its members, and never combines a layer
+    # that is not a MixedPrecisionOp.
+    _combined_linear = None
+
     def __init__(
         self,
         in_features: int,
