@@ -44,7 +44,17 @@ def load_extension(root: Path):
     return module
 
 
+def allow_cpu_only_machines() -> None:
+    """Without a GPU ComfyUI refuses to import until it is told to run on the CPU (the CI case)."""
+    import torch
+    from comfy.cli_args import args
+
+    if not torch.cuda.is_available():
+        args.cpu = True
+
+
 def main() -> int:
+    allow_cpu_only_machines()
     module = load_extension(Path(__file__).resolve().parents[1])
     extension = asyncio.run(module.comfy_entrypoint())
     names = {node.__name__ for node in asyncio.run(extension.get_node_list())}
