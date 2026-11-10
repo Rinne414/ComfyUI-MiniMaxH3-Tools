@@ -688,7 +688,7 @@
     false,
     "qwen3.5_9b_w4a8_gptq.safetensors",
     0,
-    "randomize",
+    "fixed",
     8192
    ],
    "title": "Prompt expander / \u63d0\u793a\u8bcd\u6269\u5199"

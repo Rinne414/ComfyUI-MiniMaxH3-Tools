@@ -193,3 +193,35 @@ def test_encode_report_warns_on_a_cache_hit_too(
         "m.safetensors", "Use <Picture 2>", use_cache=True, images=None
     ).result[2]
     assert report == "cache hit; cache folder; prompt mentions Picture 2 but no pictures are connected"
+
+
+def test_the_expander_seed_defaults_to_fixed() -> None:
+    seed = next(i for i in image_expand.MiniMaxH3XImagePromptExpand.define_schema().inputs if i.id == "seed")
+    assert seed.control_after_generate == "fixed"
+
+
+def _expand_report(monkeypatch: pytest.MonkeyPatch, source: str, reply: str) -> str:
+    monkeypatch.setattr(
+        image_expand,
+        "find_instructions",
+        lambda kind, extra_directories=(): instructions.Instructions("SYS", "{input text}", source),
+    )
+    monkeypatch.setattr(image_expand, "cached_generate", lambda *args: (reply, False))
+    monkeypatch.setattr(image_expand, "_available_mb", lambda: 1234)
+    return image_expand.MiniMaxH3XImagePromptExpand.execute("a fox", True, "m.safetensors", 0).result[2]
+
+
+def test_the_expander_report_names_the_instruction_file_but_never_its_folder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = "/srv/private-name/site-packages/comfyui_workflow_templates_json/templates/image_minimax_h3_image_t2i.json"
+    report = _expand_report(monkeypatch, path, GOOD_REPLY)
+    assert report.endswith("instruction: image_minimax_h3_image_t2i.json")
+    assert "private-name" not in report and "site-packages" not in report
+
+
+def test_a_failed_expansion_also_names_the_instruction_file(monkeypatch: pytest.MonkeyPatch) -> None:
+    report = _expand_report(monkeypatch, "/srv/private-name/templates/image_minimax_h3_image_edit.json", "not json")
+    assert "expansion failed" in report
+    assert report.endswith("instruction: image_minimax_h3_image_edit.json")
+    assert "private-name" not in report

@@ -154,6 +154,7 @@ def _schema_inputs() -> list:
             default=0,
             min=0,
             max=0xFFFFFFFF,
+            control_after_generate=io.ControlAfterGenerate.fixed,
             tooltip="Same seed and prompt give the same expansion.",
         ),
         io.Int.Input(
@@ -260,16 +261,18 @@ class MiniMaxH3XImagePromptExpand(io.ComfyNode):
         )
         caption, ratio, problem = parse_reply(reply)
         seconds = time.monotonic() - start
+        # the file name only: reports get pasted into public issues, a full path names the user
+        source = f"instruction: {Path(instructions.source).name}"
         if not caption:
             return io.NodeOutput(
                 prompt,
                 "",
-                f"expansion failed after {seconds:.0f} s ({problem}); your prompt is used unchanged",
+                f"expansion failed after {seconds:.0f} s ({problem}); your prompt is used unchanged; {source}",
                 reply,
             )
         report = (
             ("expander cache hit, model not loaded; " if hit else "")
             + f"expanded {len(prompt.strip())} -> {len(caption)} characters in {seconds:.0f} s; suggested ratio "
-            f"{ratio or 'none'}; model freed, available RAM {_available_mb()} MB"
+            f"{ratio or 'none'}; model freed, available RAM {_available_mb()} MB; {source}"
         )
         return io.NodeOutput(caption, ratio, report, reply)

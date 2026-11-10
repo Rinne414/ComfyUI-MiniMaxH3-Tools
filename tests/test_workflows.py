@@ -522,3 +522,22 @@ def test_thumbnails_sit_next_to_their_workflow_and_stay_small() -> None:
         assert data[:3] == b"\xff\xd8\xff", "%s is not a JPEG" % path.name
         assert len(data) < 150_000, path.name
         assert b"Exif" not in data[:64], "%s carries EXIF metadata" % path.name
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "MiniMax-H3-Image_T2I_Low_RAM.json",
+        "MiniMax-H3-Image_Edit_Low_RAM.json",
+        "MiniMax-H3-Image_Edit_Two_Pictures_Low_RAM.json",
+    ],
+)
+def test_the_expander_seed_is_fixed_so_the_cache_can_hit(filename: str) -> None:
+    """'randomize' would change the seed on every Queue and re-expand for about a minute each time."""
+    workflow = _load_workflow(WORKFLOW_DIRECTORY / filename)
+    expander = _node_by_type(workflow, "MiniMaxH3XImagePromptExpand")[0]
+    # widget order: prompt, expand, text_model, seed, control_after_generate, max_length
+    values = expander["widgets_values"]
+    assert len(values) == 6
+    assert isinstance(values[3], int) and not isinstance(values[3], bool)
+    assert values[4] == "fixed"
