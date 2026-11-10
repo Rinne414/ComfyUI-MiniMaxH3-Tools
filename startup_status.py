@@ -23,26 +23,27 @@ def _cuda_available() -> bool:
 
 
 def nf4_status() -> str:
-    """Describe whether the NF4 loaders can run on this machine.
+    """Report what was checked for the NF4 loaders, not a promise that they work.
 
-    The loader nodes are always registered; this only reports what they will do
-    when run. BitsAndBytes is read from package metadata, not imported, so
-    startup stays fast and never touches the GPU.
+    The loader nodes are always registered and check again when they run.
+    BitsAndBytes is read from package metadata, not imported, so startup stays
+    fast and never touches the GPU.
     """
     try:
         version = importlib.metadata.version("bitsandbytes")
     except importlib.metadata.PackageNotFoundError:
-        return "NF4 loaders unavailable (bitsandbytes not installed)"
-    if not _cuda_available():
-        return "NF4 loaders unavailable (no NVIDIA CUDA device found)"
-    if _version_tuple(version) < NF4_MINIMUM_VERSION:
+        return "NF4 loaders: bitsandbytes not installed"
+    found = "bitsandbytes %s found" % version if version else "bitsandbytes found"
+    if version and _version_tuple(version) < NF4_MINIMUM_VERSION:
         needed = ".".join(str(part) for part in NF4_MINIMUM_VERSION)
-        return "NF4 loaders available (bitsandbytes %s; %s or newer is tested)" % (
-            version,
-            needed,
-        )
-    return "NF4 loaders available (bitsandbytes %s)" % version
+        found += " (%s or newer is tested)" % needed
+    cuda = "CUDA device found" if _cuda_available() else "no CUDA device found"
+    return "NF4 loaders: %s, %s" % (found, cuda)
 
 
 def log_startup_status() -> None:
-    LOGGER.info("%s: %s", PREFIX, nf4_status())
+    """Log the status line. A failing probe is logged at debug level and ignored."""
+    try:
+        LOGGER.info("%s: %s", PREFIX, nf4_status())
+    except Exception:
+        LOGGER.debug("%s: could not determine NF4 status", PREFIX, exc_info=True)

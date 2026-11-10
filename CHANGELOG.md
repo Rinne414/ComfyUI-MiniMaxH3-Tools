@@ -24,7 +24,8 @@ All notable changes to this project are recorded here. The format follows
   files (`locales/en/nodeDefs.json`, `locales/zh/nodeDefs.json`).
 - The four loader nodes in the example workflows carry model download links, so
   ComfyUI offers to download a missing file.
-- A startup log line states whether the NF4 loaders can run on this machine.
+- A startup log line states whether BitsAndBytes and a CUDA device were found for the
+  NF4 loaders. A failure of that check can never stop the pack from loading.
 - `README_zh.md`, a Simplified Chinese README.
 - Bug report and feature request templates, a changelog, and a weekly CI run
   against both the pinned ComfyUI commit and ComfyUI master.

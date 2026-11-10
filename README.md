@@ -66,9 +66,10 @@ require BitsAndBytes in ComfyUI's Python environment:
 python -m pip install "bitsandbytes>=0.50.0"
 ```
 
-Restart ComfyUI and search for `MiniMax H3`. On startup the log states whether the
-NF4 loaders can run on this machine, for example
-`MiniMax-H3 Tools: NF4 loaders available (bitsandbytes 0.50.0)`.
+Restart ComfyUI and search for `MiniMax H3`. On startup the log states what it found for the
+NF4 loaders, for example
+`MiniMax-H3 Tools: NF4 loaders: bitsandbytes 0.50.0 found, CUDA device found`.
+The loaders check again when they run.
 
 Model weights are separate. For the standard INT8 path, use the files documented
 by [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3). For NF4,

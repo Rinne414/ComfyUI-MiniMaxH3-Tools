@@ -48,7 +48,7 @@ git clone https://github.com/Rinne414/ComfyUI-MiniMaxH3-Tools.git
 python -m pip install "bitsandbytes>=0.50.0"
 ```
 
-重启 ComfyUI 后搜索 `MiniMax H3`。启动时日志会说明 NF4 加载节点能否在这台机器上运行，例如 `MiniMax-H3 Tools: NF4 loaders available (bitsandbytes 0.50.0)`。
+重启 ComfyUI 后搜索 `MiniMax H3`。启动时日志会写出为 NF4 加载节点检查到的内容，例如 `MiniMax-H3 Tools: NF4 loaders: bitsandbytes 0.50.0 found, CUDA device found`。加载节点运行时会再次检查。
 
 模型权重需要另行下载。标准 INT8 路径请使用 [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3) 中说明的文件。NF4 请使用下面的 DiffSynth 文件。
 
