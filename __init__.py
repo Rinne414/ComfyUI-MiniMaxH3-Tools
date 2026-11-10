@@ -14,6 +14,7 @@ if __package__:
     from .canvas_solver import MiniMaxH3XCanvasSolver
     from .nf4_loader import get_nf4_nodes
     from .prompt_lint import MiniMaxH3XPromptLint
+    from .startup_status import log_startup_status
 else:
     from audio_reroll import MiniMaxH3XAudioReroll
     from av_latent import (
@@ -26,6 +27,7 @@ else:
     from canvas_solver import MiniMaxH3XCanvasSolver
     from nf4_loader import get_nf4_nodes
     from prompt_lint import MiniMaxH3XPromptLint
+    from startup_status import log_startup_status
 
 NODES = (
     MiniMaxH3XCanvasSolver,
@@ -38,6 +40,8 @@ NODES = (
     MiniMaxH3XAudioReroll,
     *get_nf4_nodes(),
 )
+
+log_startup_status()
 
 
 class MiniMaxH3ToolsExtension(ComfyExtension):
