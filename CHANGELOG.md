@@ -20,8 +20,9 @@ All notable changes to this project are recorded here. The format follows
   unchanged.
 - The Planning and AV Latent example workflows include `Preview as Text` nodes,
   so pressing Run no longer fails with "Prompt has no outputs".
-- English and Simplified Chinese node text through ComfyUI's own `locales/`
-  files (`locales/en/nodeDefs.json`, `locales/zh/nodeDefs.json`).
+- English, Simplified Chinese and Traditional Chinese node text through ComfyUI's
+  own `locales/` files (`locales/en`, `locales/zh` and `locales/zh-TW`, each with
+  a `nodeDefs.json`).
 - The four loader nodes in the example workflows carry model download links, so
   ComfyUI offers to download a missing file.
 - A startup log line states whether BitsAndBytes and a CUDA device were found for the

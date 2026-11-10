@@ -1,0 +1,311 @@
+{
+  "MiniMaxH3XCanvasSolver": {
+    "display_name": "MiniMax H3 畫布規劃",
+    "description": "在加入佇列前計算精確的畫布、影格網格、潛空間尺寸和 token 數；只有明確選擇硬體設定檔後，才會估算執行時間。",
+    "inputs": {
+      "aspect_ratio": {
+        "name": "寬高比",
+        "tooltip": "畫布的形狀。寬度和高度會對齊到 32 的倍數。"
+      },
+      "megapixels": {
+        "name": "百萬像素",
+        "tooltip": "以 ComfyUI 的 1024*1024 百萬像素單位設定目標面積。"
+      },
+      "seconds": {
+        "name": "時長（秒）",
+        "tooltip": "以 24 fps 設定時長，並向上對齊到 H3 的 17k+5 影格網格。"
+      },
+      "steps": {
+        "name": "步數",
+        "tooltip": "只有選擇了硬體成本設定檔時才會使用。"
+      },
+      "cost_profile": {
+        "name": "成本設定檔",
+        "tooltip": "預設不估算執行時間；設定檔只適用於特定機器，必須明確選擇。"
+      },
+      "vram_budget_gib": {
+        "name": "顯示記憶體預算（GiB）",
+        "tooltip": "只會與所選設定檔中的門檻值比較。"
+      },
+      "clamp_to_trained_cap": {
+        "name": "限制在訓練上限內",
+        "tooltip": "關閉時，回報 ComfyUI 實際建立的畫布；開啟時，會把超出上限的要求縮小到 H3 文件記載的訓練面積。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "寬度"
+      },
+      "1": {
+        "name": "高度"
+      },
+      "2": {
+        "name": "影格數"
+      },
+      "3": {
+        "name": "潛空間影格數 (latent_t)"
+      },
+      "4": {
+        "name": "音訊潛空間長度 (audio_t)"
+      },
+      "5": {
+        "name": "影片 token 數"
+      },
+      "6": {
+        "name": "估計單次迭代耗時（秒）"
+      },
+      "7": {
+        "name": "估計總耗時（分鐘）"
+      },
+      "8": {
+        "name": "報告"
+      }
+    }
+  },
+  "MiniMaxH3XSplitAV": {
+    "display_name": "MiniMax H3 拆分影音潛空間",
+    "description": "把 H3 影音潛空間拆成各自獨立的影片潛空間和音訊潛空間。",
+    "inputs": {
+      "latent": {
+        "name": "潛空間"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "影片"
+      },
+      "1": {
+        "name": "音訊"
+      }
+    }
+  },
+  "MiniMaxH3XJoinAV": {
+    "display_name": "MiniMax H3 合併影音潛空間",
+    "description": "把影片和音訊潛空間重新合併成 H3 影音潛空間，並檢查兩個串流對應的影格數相同。",
+    "inputs": {
+      "video": {
+        "name": "影片"
+      },
+      "audio": {
+        "name": "音訊"
+      },
+      "strict": {
+        "name": "嚴格模式",
+        "tooltip": "拒絕時長不一致、或 latent_t 不在 17k+5 網格上的串流；只有刻意組出非標準組合時才關閉。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "潛空間"
+      }
+    }
+  },
+  "MiniMaxH3XLatentInfo": {
+    "display_name": "MiniMax H3 影音潛空間資訊",
+    "description": "回報兩個串流的形狀、推算出的時長和 token 數。",
+    "inputs": {
+      "latent": {
+        "name": "潛空間"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "報告"
+      },
+      "1": {
+        "name": "影格數"
+      },
+      "2": {
+        "name": "影片 token 數"
+      }
+    }
+  },
+  "MiniMaxH3XUpscaleVideoLatent": {
+    "display_name": "MiniMax H3 放大影片潛空間",
+    "description": "只調整 H3 影音潛空間中影片串流的尺寸，音訊維持不變；目標像素尺寸會對齊到 32 的倍數。",
+    "inputs": {
+      "latent": {
+        "name": "潛空間"
+      },
+      "width": {
+        "name": "寬度",
+        "tooltip": "目標像素寬度；潛空間網格的寬度是這個值除以 16。"
+      },
+      "height": {
+        "name": "高度",
+        "tooltip": "目標像素高度；潛空間網格的高度是這個值除以 16。"
+      },
+      "upscale_method": {
+        "name": "縮放方法",
+        "tooltip": "縮放每一個影片影格時使用的插值方法。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "潛空間"
+      }
+    }
+  },
+  "MiniMaxH3XTemporalTrim": {
+    "display_name": "MiniMax H3 時長裁剪",
+    "description": "縮短 H3 潛空間，同時讓影片和音訊保持同步，並把結果對齊到模型的 17k+5 影格網格。",
+    "inputs": {
+      "latent": {
+        "name": "潛空間"
+      },
+      "keep_seconds": {
+        "name": "保留時長（秒）",
+        "tooltip": "從開頭保留的時長，並對齊到影格網格。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "潛空間"
+      },
+      "1": {
+        "name": "影格數"
+      }
+    }
+  },
+  "MiniMaxH3XPromptLint": {
+    "display_name": "MiniMax H3 提示詞檢查",
+    "description": "依 MiniMax 文件記載的格式規則檢查 H3 提示詞；不使用 LLM、不改寫，並且原樣傳遞提示詞。",
+    "inputs": {
+      "prompt": {
+        "name": "提示詞",
+        "tooltip": "要檢查的 H3 提示詞，會原樣傳遞。"
+      },
+      "mode": {
+        "name": "模式",
+        "tooltip": "t2va/fl2va 需要三個基礎欄位；ref2va 需要六個完整參考欄位。"
+      },
+      "duration_seconds": {
+        "name": "時長（秒）",
+        "tooltip": "片段時長，用來標出超過結尾的切鏡時間；0 代表停用這項檢查。"
+      },
+      "ref_images": {
+        "name": "參考圖片數",
+        "tooltip": "已連接的參考圖片數量，用來標出超出範圍的 <Picture N>。"
+      },
+      "ref_videos": {
+        "name": "參考影片數",
+        "tooltip": "已連接的參考影片數量，用來標出超出範圍的 <Video N>。"
+      },
+      "ref_audios": {
+        "name": "參考音訊數",
+        "tooltip": "已連接的參考音訊數量，用來標出超出範圍的 <Audio N>。"
+      },
+      "raise_on_warning": {
+        "name": "有警告時報錯",
+        "tooltip": "發現警告時讓工作流程失敗，而不是繼續傳遞提示詞；預設關閉，避免檢查警告擋住算圖。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "提示詞"
+      },
+      "1": {
+        "name": "警告"
+      },
+      "2": {
+        "name": "是否通過"
+      }
+    }
+  },
+  "MiniMaxH3XAudioReroll": {
+    "display_name": "MiniMax H3 音訊重新生成（實驗性）",
+    "description": "以已生成的影片潛空間為參考，重新取樣音訊；畫面會被強力保留，但仍會重新取樣。如果要逐位元一致的畫面，請在下游用 video_passthrough 進行混流。",
+    "inputs": {
+      "conditioning": {
+        "name": "條件",
+        "tooltip": "來自 H3 條件節點的條件，其中的環境音或音樂文字已經修改。"
+      },
+      "av_latent": {
+        "name": "影音潛空間",
+        "tooltip": "來自你想保留畫面的那次執行所產生的影音潛空間。"
+      },
+      "video_cond_strength": {
+        "name": "影片參考強度",
+        "tooltip": "影片參考的雜訊增強值。1.0 代表完全乾淨地輸入，最大程度保留畫面；較低的值會讓畫面產生變化。DiT 關鍵影格的預設值是 0.999。"
+      },
+      "reset_audio_latent": {
+        "name": "重設音訊潛空間",
+        "tooltip": "從全零開始音訊串流，讓取樣器寫出全新的音軌；關閉時會沿用舊的音訊潛空間，結果會偏向原本的音軌。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "正向條件"
+      },
+      "1": {
+        "name": "潛空間"
+      },
+      "2": {
+        "name": "原始影片潛空間 (video_passthrough)"
+      },
+      "3": {
+        "name": "資訊"
+      }
+    }
+  },
+  "MiniMaxH3XNF4ModelLoader": {
+    "display_name": "MiniMax H3 NF4 模型載入",
+    "description": "使用 BitsAndBytes 載入 DiffSynth 格式的 MiniMax H3 NF4 擴散模型。",
+    "inputs": {
+      "model_name": {
+        "name": "模型檔案",
+        "tooltip": "NF4 FL2VA 擴散模型，檔名為 minimax-h3-fl2va-nf4.safetensors，放在 models/diffusion_models 資料夾。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "模型"
+      }
+    }
+  },
+  "MiniMaxH3XNF4TextEncoderLoader": {
+    "display_name": "MiniMax H3 NF4 文字編碼器載入",
+    "description": "載入 DiffSynth 格式的 MiniMax H3 Qwen3-VL NF4 編碼器。",
+    "inputs": {
+      "encoder_name": {
+        "name": "編碼器檔案",
+        "tooltip": "NF4 Qwen3-VL 文字編碼器，檔名為 minimax-h3-text-encoder-nf4.safetensors，放在 models/text_encoders 資料夾。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "文字編碼器"
+      }
+    }
+  },
+  "MiniMaxH3XNF4VideoVAELoader": {
+    "display_name": "MiniMax H3 NF4 影片 VAE 載入",
+    "description": "載入 DiffSynth 格式的 MiniMax H3 NF4 影片 VAE。",
+    "inputs": {
+      "vae_name": {
+        "name": "VAE 檔案",
+        "tooltip": "NF4 影片 VAE，檔名為 video_vae_nf4.safetensors，放在 models/vae 資料夾。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "VAE"
+      }
+    }
+  },
+  "MiniMaxH3XNF4AudioVAELoader": {
+    "display_name": "MiniMax H3 NF4 音訊 VAE 載入",
+    "description": "載入 DiffSynth 格式的 MiniMax H3 NF4 音訊 VAE。",
+    "inputs": {
+      "vae_name": {
+        "name": "VAE 檔案",
+        "tooltip": "NF4 音訊 VAE，檔名為 audio_vae_nf4.safetensors，放在 models/vae 資料夾。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "VAE"
+      }
+    }
+  }
+}

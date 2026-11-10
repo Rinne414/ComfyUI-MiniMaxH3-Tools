@@ -1,7 +1,7 @@
 {
   "MiniMaxH3XCanvasSolver": {
     "display_name": "MiniMax H3 画布规划",
-    "description": "在加入队列前计算精确画布、帧网格、潜空间尺寸和令牌数；仅在明确选择硬件配置后估算运行时间。",
+    "description": "在加入队列前计算精确画布、帧网格、潜空间尺寸和 token 数；仅在明确选择硬件配置后估算运行时间。",
     "inputs": {
       "aspect_ratio": {
         "name": "宽高比",
@@ -49,7 +49,7 @@
         "name": "音频潜空间长度 (audio_t)"
       },
       "5": {
-        "name": "视频令牌数"
+        "name": "视频 token 数"
       },
       "6": {
         "name": "估算单次迭代耗时（秒）"
@@ -102,7 +102,7 @@
   },
   "MiniMaxH3XLatentInfo": {
     "display_name": "MiniMax H3 音视频潜空间信息",
-    "description": "报告两个流的形状、推算时长和令牌数。",
+    "description": "报告两个流的形状、推算时长和 token 数。",
     "inputs": {
       "latent": {
         "name": "潜空间"
@@ -116,7 +116,7 @@
         "name": "帧数"
       },
       "2": {
-        "name": "视频令牌数"
+        "name": "视频 token 数"
       }
     }
   },
@@ -241,7 +241,7 @@
         "name": "潜空间"
       },
       "2": {
-        "name": "原始视频潜空间"
+        "name": "原始视频潜空间 (video_passthrough)"
       },
       "3": {
         "name": "信息"

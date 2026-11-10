@@ -24,8 +24,8 @@ Every example is also a plain `.json` file in
 Model files are downloaded by you, or by ComfyUI when you click the download
 link it shows for a missing model in an example workflow.
 
-Node text is available in English and Simplified Chinese and follows ComfyUI's
-language setting; other languages show English.
+Node text is available in English, Simplified Chinese and Traditional Chinese and
+follows ComfyUI's language setting; other languages show English.
 
 ## Why this exists
 
@@ -290,7 +290,7 @@ BitsAndBytes CUDA round trips.
 |---|---|
 | `*.py` | Installable ComfyUI extension and twelve nodes |
 | `tests/` | Behavior tests |
-| `locales/` | English and Simplified Chinese node text |
+| `locales/` | English, Simplified Chinese and Traditional Chinese node text |
 | `example_workflows/` | Loadable planning, AV-latent, reroll, and advanced generation workflows |
 | `docs/` | Node-specific experimental findings |
 | `research/` | Single-machine calibration data and reproduction scripts |

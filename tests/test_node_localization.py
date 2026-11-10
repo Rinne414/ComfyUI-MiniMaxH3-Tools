@@ -63,7 +63,10 @@ NODE_FILES = (
     REPOSITORY_ROOT / "nf4_loader.py",
 )
 LOCALES_DIRECTORY = REPOSITORY_ROOT / "locales"
-LANGUAGES = ("en", "zh")
+LANGUAGES = ("en", "zh", "zh-TW")
+CHINESE_LANGUAGES = ("zh", "zh-TW")
+# Characters that only exist in the Simplified form; they must not appear in zh-TW.
+SIMPLIFIED_ONLY = "视频数图时载档设项认误报检显储规览证译选"
 
 
 def _load_locale(language: str) -> dict:
@@ -117,8 +120,10 @@ def test_locale_files_exist_for_every_language() -> None:
         assert (LOCALES_DIRECTORY / language / "nodeDefs.json").is_file()
 
 
-def test_en_and_zh_have_identical_key_structure() -> None:
-    assert _key_structure(_load_locale("en")) == _key_structure(_load_locale("zh"))
+def test_all_locales_have_identical_key_structure() -> None:
+    reference = _key_structure(_load_locale("en"))
+    for language in LANGUAGES:
+        assert _key_structure(_load_locale(language)) == reference, language
 
 
 @pytest.mark.parametrize("language", LANGUAGES)
@@ -141,16 +146,34 @@ def test_every_input_and_output_has_a_name(language: str) -> None:
             assert entry["outputs"][str(index)]["name"].strip(), (node_id, index)
 
 
-def test_zh_text_is_chinese_and_en_text_is_not() -> None:
-    en, zh = _load_locale("en"), _load_locale("zh")
+def test_chinese_text_is_chinese_and_en_text_is_not() -> None:
+    en = _load_locale("en")
     for node_id in SCHEMAS:
         assert not CJK.search(json.dumps(en[node_id], ensure_ascii=False)), node_id
-        assert CJK.search(zh[node_id]["display_name"]), node_id
-        assert CJK.search(zh[node_id]["description"]), node_id
-        for input_id, entry in zh[node_id]["inputs"].items():
-            assert CJK.search(entry["name"]), (node_id, input_id)
-            if "tooltip" in entry:
-                assert CJK.search(entry["tooltip"]), (node_id, input_id)
+    for language in CHINESE_LANGUAGES:
+        locale = _load_locale(language)
+        for node_id in SCHEMAS:
+            assert CJK.search(locale[node_id]["display_name"]), (language, node_id)
+            assert CJK.search(locale[node_id]["description"]), (language, node_id)
+            for input_id, entry in locale[node_id]["inputs"].items():
+                assert CJK.search(entry["name"]), (language, node_id, input_id)
+                if "tooltip" in entry:
+                    assert CJK.search(entry["tooltip"]), (language, node_id, input_id)
+
+
+def test_zh_tw_uses_traditional_characters_and_zh_does_not() -> None:
+    zh_tw = json.dumps(_load_locale("zh-TW"), ensure_ascii=False)
+    assert not [character for character in SIMPLIFIED_ONLY if character in zh_tw]
+    zh = json.dumps(_load_locale("zh"), ensure_ascii=False)
+    assert "视频" in zh and "影片" in zh_tw
+
+
+def test_chinese_locales_mention_the_ids_that_their_texts_refer_to() -> None:
+    """A label may be translated, but text that names an id must let users find it."""
+    for language in CHINESE_LANGUAGES:
+        reroll = _load_locale(language)["MiniMaxH3XAudioReroll"]
+        assert "video_passthrough" in reroll["description"]
+        assert "video_passthrough" in reroll["outputs"]["2"]["name"]
 
 
 def test_en_locale_matches_the_schema_text() -> None:
@@ -166,14 +189,22 @@ def test_en_locale_matches_the_schema_text() -> None:
                 node_id,
                 node_input.id,
             )
+            assert entry["inputs"][node_input.id]["name"] == node_input.id, (
+                node_id,
+                node_input.id,
+            )
+        for index, output in enumerate(schema.outputs):
+            shown = output.display_name or output.io_type
+            assert entry["outputs"][str(index)]["name"] == shown, (node_id, index)
 
 
-def test_every_tooltip_in_a_schema_is_translated() -> None:
-    zh = _load_locale("zh")
+@pytest.mark.parametrize("language", CHINESE_LANGUAGES)
+def test_every_tooltip_in_a_schema_is_translated(language: str) -> None:
+    locale = _load_locale(language)
     for node_id, schema in SCHEMAS.items():
         for node_input in schema.inputs:
             if getattr(node_input, "tooltip", None):
-                assert "tooltip" in zh[node_id]["inputs"][node_input.id], (
+                assert "tooltip" in locale[node_id]["inputs"][node_input.id], (
                     node_id,
                     node_input.id,
                 )
