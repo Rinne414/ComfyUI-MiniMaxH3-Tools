@@ -13,9 +13,11 @@ weights.
 `0.30.0` or later. The four NF4 loaders also need BitsAndBytes; see
 [Install](#install).
 
-**Start here:** open ComfyUI's Templates browser, pick
-`MiniMax-H3_Planning_and_Prompt_Lint` under `ComfyUI-MiniMaxH3-Tools`, and run
-it. It needs no model files. Every example is also a plain `.json` file in
+**Start here:** open ComfyUI's Templates browser and pick
+`MiniMax-H3_Planning_and_Prompt_Lint` from this pack's entry (the browser names
+it after the install folder: `minimax-h3-tools` for a registry install,
+`ComfyUI-MiniMaxH3-Tools` for a git clone), then run it. It needs no model files.
+Every example is also a plain `.json` file in
 [`example_workflows/`](example_workflows/) that you can drag into the editor.
 
 **Runs locally.** The nodes make no network requests and send nothing online.
@@ -136,6 +138,11 @@ Current limits:
 
 ## Nodes
 
+Canvas Planner, Prompt Lint and AV Latent Info also attach their text report to
+the job, so it is recorded with the run in the queue and history. To read it on
+the canvas, connect the report output to a core `Preview as Text` node; the
+Planning and AV Latent examples already do.
+
 ### MiniMax H3 Canvas Planner
 
 Plans the exact geometry before a render is queued.
@@ -146,8 +153,7 @@ Outputs:
 - `frames` snapped up to H3's `17k+5` temporal grid
 - `latent_t` and `audio_t`
 - exact `video_tokens`
-- optional runtime estimates and a detailed report, which the node also shows
-  on its face
+- optional runtime estimates and a detailed `report`
 
 Runtime estimation is disabled by default. The node returns `-1.0` for both
 estimate outputs until a hardware profile is explicitly selected. This is
@@ -179,7 +185,7 @@ temporal grid, and the implied frame count before constructing an H3 latent.
 
 Reports both tensor shapes, duration, token count, dtype, device, and stream
 mismatches. This is intended for inspecting unfamiliar workflows before
-sampling. The report is shown on the node.
+sampling.
 
 ### MiniMax H3 Upscale Video Latent
 
@@ -203,7 +209,7 @@ It validates the required base or ref2va fields, shot numbering and timestamps,
 dialogue language tags, speaker IDs, voiceover wording, soundscape/music rules,
 and reference tag numbering. The node returns the original prompt, a readable
 report, and an `is_clean` boolean. `raise_on_warning` can make validation fail
-the workflow explicitly. The report is also shown on the node.
+the workflow explicitly.
 
 This complements prompt-generation nodes; it does not duplicate them.
 
@@ -230,8 +236,9 @@ describe that experiment only.
 
 ## Example workflows
 
-The files under `example_workflows/` appear in ComfyUI's Templates browser under
-`ComfyUI-MiniMaxH3-Tools` and can also be dragged directly into the editor. The
+The files under `example_workflows/` appear in ComfyUI's Templates browser, in
+this pack's entry (named after the install folder, `minimax-h3-tools` or
+`ComfyUI-MiniMaxH3-Tools`), and can also be dragged directly into the editor. The
 loader nodes in them carry download links for the standard Comfy-Org INT8 files
 (`Comfy-Org/MiniMax-H3` on Hugging Face), so ComfyUI offers to download a model
 that is missing. Start with the first workflow; it needs no model files.

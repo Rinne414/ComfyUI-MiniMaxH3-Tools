@@ -1,4 +1,4 @@
-"""The report nodes show their text on the node as well as returning it."""
+"""The report nodes attach their text to the job as well as returning it."""
 
 import os
 import sys
@@ -19,24 +19,24 @@ def _preview_text(output) -> str:
     return text
 
 
-def test_canvas_planner_shows_its_report_on_the_node() -> None:
+def test_canvas_planner_attaches_its_report_to_the_job() -> None:
     output = MiniMaxH3XCanvasSolver.execute(
         "16:9 (Widescreen)", 0.4, 5.0, 20, NO_PROFILE, 24.0, False
     )
     assert _preview_text(output) == output.result[8]
 
 
-def test_prompt_lint_shows_its_warnings_on_the_node() -> None:
+def test_prompt_lint_attaches_its_warnings_to_the_job() -> None:
     output = MiniMaxH3XPromptLint.execute("a short prompt", "ref2va", 0.0, 0, 0, 0)
     assert output.result[1] != "clean -- no issues found"
     assert _preview_text(output) == output.result[1]
 
 
-def test_prompt_lint_shows_a_clean_result_on_the_node() -> None:
+def test_prompt_lint_attaches_a_clean_result_to_the_job() -> None:
     output = MiniMaxH3XPromptLint.execute("", "t2va", 0.0, 0, 0, 0)
     assert _preview_text(output) == output.result[1]
 
 
-def test_av_latent_info_shows_its_report_on_the_node() -> None:
+def test_av_latent_info_attaches_its_report_to_the_job() -> None:
     output = MiniMaxH3XLatentInfo.execute(make_latent())
     assert _preview_text(output) == output.result[0]

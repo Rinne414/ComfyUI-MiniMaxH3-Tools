@@ -14,8 +14,12 @@ All notable changes to this project are recorded here. The format follows
 - Every NF4 loader input says which file it expects and which models folder it
   belongs in. Prompt Lint and the AV latent nodes gained tooltips for the inputs
   that had none.
-- Canvas Planner, Prompt Lint and AV Latent Info show their report on the node,
-  so no display node is needed. The string outputs are unchanged.
+- Canvas Planner, Prompt Lint and AV Latent Info attach their report to the job,
+  so it is recorded with the run in the queue and history. Connect it to a core
+  `Preview as Text` node to read it on the canvas. The string outputs are
+  unchanged.
+- The Planning and AV Latent example workflows include `Preview as Text` nodes,
+  so pressing Run no longer fails with "Prompt has no outputs".
 - English and Simplified Chinese node text through ComfyUI's own `locales/`
   files (`locales/en/nodeDefs.json`, `locales/zh/nodeDefs.json`).
 - The four loader nodes in the example workflows carry model download links, so

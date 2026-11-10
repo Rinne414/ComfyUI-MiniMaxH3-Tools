@@ -6,7 +6,7 @@ MiniMax-H3 在一次采样中同时生成视频和同步的立体声音频。这
 
 **安装：**在 ComfyUI Manager 中搜索 `MiniMax-H3 Tools`（或运行 `comfy node install minimax-h3-tools`），然后重启 ComfyUI。需要 ComfyUI `0.30.0` 或更高版本。四个 NF4 加载节点还需要 BitsAndBytes，见[安装](#安装)。
 
-**从这里开始：**打开 ComfyUI 的“模板”浏览器，在 `ComfyUI-MiniMaxH3-Tools` 下选择 `MiniMax-H3_Planning_and_Prompt_Lint` 并运行。它不需要任何模型文件。所有示例也都是 [`example_workflows/`](example_workflows/) 里的普通 `.json` 文件，可以直接拖进编辑器。
+**从这里开始：**打开 ComfyUI 的“模板”浏览器，在本插件的条目中选择 `MiniMax-H3_Planning_and_Prompt_Lint`（浏览器以安装文件夹命名该条目：通过注册表安装是 `minimax-h3-tools`，用 git clone 安装是 `ComfyUI-MiniMaxH3-Tools`），然后运行。它不需要任何模型文件。所有示例也都是 [`example_workflows/`](example_workflows/) 里的普通 `.json` 文件，可以直接拖进编辑器。
 
 **完全在本地运行。**这些节点不发起任何网络请求，也不会向外发送任何内容。模型文件由你自己下载，或者在示例工作流里缺少模型时，点击 ComfyUI 显示的下载链接，由 ComfyUI 下载。
 
@@ -93,6 +93,8 @@ NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁�
 
 ## 节点
 
+画布规划、提示词检查和音视频潜空间信息还会把文字报告附在任务上，因此报告会随这次运行记录在队列和历史中。若要在画布上查看，请把报告输出连接到核心的 `Preview as Text` 节点；规划和音视频潜空间两个示例已经这样连接。
+
 节点在 ComfyUI 中文界面下显示为中文名称，例如“MiniMax H3 画布规划”。下面的标题使用英文名称，便于对照 ComfyUI 的英文界面。
 
 ### MiniMax H3 Canvas Planner（画布规划）
@@ -105,7 +107,7 @@ NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁�
 - 向上对齐到 H3 `17k+5` 时间网格的 `frames`
 - `latent_t` 和 `audio_t`
 - 精确的 `video_tokens`
-- 可选的运行时间估算和详细报告；报告也会直接显示在节点上
+- 可选的运行时间估算和详细的 `report`
 
 运行时间估算默认关闭。在明确选择硬件配置之前，节点的两个估算输出都返回 `-1.0`。这是有意为之：仅凭 GPU 型号不足以预测 H3 的速度，量化方式、注意力后端、PyTorch/CUDA 版本、系统内存和卸载行为也都有影响。
 
@@ -123,7 +125,7 @@ NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁�
 
 ### MiniMax H3 AV Latent Info（音视频潜空间信息）
 
-报告两个张量的形状、时长、令牌数、数据类型、设备以及流不匹配的情况，用于在采样前检查陌生的工作流。报告会显示在节点上。
+报告两个张量的形状、时长、令牌数、数据类型、设备以及流不匹配的情况，用于在采样前检查陌生的工作流。
 
 ### MiniMax H3 Upscale Video Latent（放大视频潜空间）
 
@@ -139,7 +141,7 @@ NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁�
 
 按 MiniMax 文档规定的格式检查提示词，不会改写提示词。
 
-它会验证必需的基础字段或 ref2va 字段、镜头编号和时间戳、对白语言标签、说话人 ID、旁白措辞、环境音/音乐规则以及参考标签编号。节点返回原始提示词、易读的报告和一个 `is_clean` 布尔值。`raise_on_warning` 可以让检查结果直接使工作流失败。报告也会显示在节点上。
+它会验证必需的基础字段或 ref2va 字段、镜头编号和时间戳、对白语言标签、说话人 ID、旁白措辞、环境音/音乐规则以及参考标签编号。节点返回原始提示词、易读的报告和一个 `is_clean` 布尔值。`raise_on_warning` 可以让检查结果直接使工作流失败。
 
 它是对提示词生成节点的补充，而不是重复。
 
@@ -160,7 +162,7 @@ NF4 用 4 位存储量化后的 Linear 权重，因此能减少下载量和磁�
 
 ## 示例工作流
 
-`example_workflows/` 下的文件会出现在 ComfyUI 的“模板”浏览器中，位于 `ComfyUI-MiniMaxH3-Tools` 下，也可以直接拖进编辑器。其中的加载节点带有 Comfy-Org 标准 INT8 文件（Hugging Face 上的 `Comfy-Org/MiniMax-H3`）的下载链接，缺少模型时 ComfyUI 会提示下载。请先从第一个工作流开始，它不需要任何模型文件。
+`example_workflows/` 下的文件会出现在 ComfyUI 的“模板”浏览器中，位于本插件的条目里（以安装文件夹命名：`minimax-h3-tools` 或 `ComfyUI-MiniMaxH3-Tools`），也可以直接拖进编辑器。其中的加载节点带有 Comfy-Org 标准 INT8 文件（Hugging Face 上的 `Comfy-Org/MiniMax-H3`）的下载链接，缺少模型时 ComfyUI 会提示下载。请先从第一个工作流开始，它不需要任何模型文件。
 
 | 工作流 | 用途 | 是否需要模型 |
 |---|---|---|
