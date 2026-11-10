@@ -17,6 +17,13 @@ from nf4_cpu_support import BACKENDS, make_case
 import comfy.ops  # noqa: E402  (nf4_cpu_support set up the CPU first)
 import comfy.quant_ops  # noqa: E402
 
+# Older cores (the weekly CI job's pinned one) have no fp16 fused path, so the
+# defect these tests guard against cannot happen there.
+pytestmark = pytest.mark.skipif(
+    not hasattr(comfy.ops, "_fp16_linear_wanted"),
+    reason="this ComfyUI has no fp16-accumulation fused linear path",
+)
+
 
 @pytest.fixture
 def fp16_accumulation(monkeypatch):

@@ -16,6 +16,8 @@ from nf4_cpu_support import (
     CPU,
     dynamic_patcher,
     make_case,
+    needs_file_backed_weights,
+    needs_prefetch,
     offload_to_pinned_host,
     weight_sized_tensors,
 )
@@ -38,6 +40,7 @@ def _loaded(backend, monkeypatch, offloaded):
     return case, model, patcher
 
 
+@needs_prefetch
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_dynamic_prefetch_stages_nf4_linear_bytes(backend, monkeypatch) -> None:
     case, model, _ = _loaded(backend, monkeypatch, offloaded=False)
@@ -54,7 +57,14 @@ def test_dynamic_prefetch_stages_nf4_linear_bytes(backend, monkeypatch) -> None:
     assert not hasattr(case.module, "_prefetch")
 
 
-@pytest.mark.parametrize("prefetched", [False, True], ids=["cast", "prefetched"])
+@needs_file_backed_weights
+@pytest.mark.parametrize(
+    "prefetched",
+    [
+        pytest.param(False, id="cast"),
+        pytest.param(True, id="prefetched", marks=needs_prefetch),
+    ],
+)
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_dynamic_forward_uses_core_staged_weight_without_host_copy(
     backend, prefetched, monkeypatch

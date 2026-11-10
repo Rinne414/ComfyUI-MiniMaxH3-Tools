@@ -20,6 +20,7 @@ import threading
 from dataclasses import dataclass
 from typing import Callable
 
+import pytest
 import torch
 import torch.nn.functional as functional
 from comfy.cli_args import args
@@ -30,6 +31,7 @@ if not torch.cuda.is_available():
 import comfy.memory_management  # noqa: E402
 import comfy.model_management  # noqa: E402
 import comfy.model_patcher  # noqa: E402
+import comfy.model_prefetch  # noqa: E402
 import comfy.ops  # noqa: E402
 import comfy.pinned_memory  # noqa: E402
 
@@ -37,6 +39,33 @@ import nf4_loader  # noqa: E402
 
 CPU = torch.device("cpu")
 BACKENDS = ("fake", "bitsandbytes")
+
+
+def _file_slice(nbytes: int):
+    return comfy.memory_management.TensorFileSlice(None, threading.Lock(), 0, nbytes)
+
+
+def _keeps_file_backed_weights() -> bool:
+    """Whether this ComfyUI leaves a file-backed meta weight offloaded when it
+    prepares a cast, instead of replacing it with zeros in RAM."""
+    probe = torch.nn.Linear(1, 1, bias=False)
+    weight = torch.empty((1, 1), device="meta")
+    weight.untyped_storage()._comfy_tensor_file_slice = _file_slice(4)
+    probe.weight = torch.nn.Parameter(weight, requires_grad=False)
+    comfy.ops.materialize_meta_param(probe, ["weight"])
+    return probe.weight.is_meta
+
+
+# The weekly CI job also runs against an older pinned ComfyUI; these skip there
+# when the core feature they exercise does not exist yet.
+needs_prefetch = pytest.mark.skipif(
+    not hasattr(comfy.model_prefetch, "pin_modules"),
+    reason="this ComfyUI has no dynamic VRAM prefetch (model_prefetch.pin_modules)",
+)
+needs_file_backed_weights = pytest.mark.skipif(
+    not _keeps_file_backed_weights(),
+    reason="this ComfyUI loads offloaded weights back into RAM before a cast",
+)
 
 
 class FakeQuantState:
@@ -247,10 +276,8 @@ def offload_to_pinned_host(module: torch.nn.Module) -> torch.Tensor:
         if tensor is None:
             continue
         offloaded = torch.empty(tensor.shape, dtype=tensor.dtype, device="meta")
-        offloaded.untyped_storage()._comfy_tensor_file_slice = (
-            comfy.memory_management.TensorFileSlice(
-                None, threading.Lock(), 0, tensor.numel() * tensor.element_size()
-            )
+        offloaded.untyped_storage()._comfy_tensor_file_slice = _file_slice(
+            tensor.numel() * tensor.element_size()
         )
         setattr(module, name, torch.nn.Parameter(offloaded, requires_grad=False))
     module._pins = {"weights": {"pin": pin, "registered": True}}
