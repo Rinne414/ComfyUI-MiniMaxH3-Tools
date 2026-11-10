@@ -96,6 +96,9 @@ def model_download_properties(
     }]
 
 
+# Core "Preview as Text" accepts any type on its single input.
+ANY_TYPE = "*"
+
 NODE_SCHEMAS: dict[str, NodeSchema] = {
     "MarkdownNote": ((), ()),
     "MiniMaxH3XCanvasSolver": (
@@ -189,6 +192,7 @@ NODE_SCHEMAS: dict[str, NodeSchema] = {
         (("images", "IMAGE"), ("audio", "AUDIO")),
         (("VIDEO", "VIDEO"),),
     ),
+    "PreviewAny": ((("source", ANY_TYPE),), (("STRING", "STRING"),)),
     "SaveVideo": ((("video", "VIDEO"),), ()),
     "SaveAudio": ((("audio", "AUDIO"),), ()),
 }
@@ -199,15 +203,15 @@ non_diegetic_music: N/A"""
 
 PLANNING_NOTE = """# Planning and prompt check / 规划与提示词检查
 
-**English:** Use the canvas planner to calculate a legal H3 size and frame count before loading models. Use Prompt Lint to validate the documented H3 prompt structure. This workflow does not load a model and has no output node.
+**English:** Use the canvas planner to calculate a legal H3 size and frame count before loading models. Use Prompt Lint to validate the documented H3 prompt structure. This workflow does not load a model. The two Preview as Text nodes show the planner report and the lint result on the canvas; the same text is also recorded with the job in the queue and history.
 
-**简体中文：** 在加载模型前，使用画布规划节点计算合法的 H3 尺寸和帧数；使用提示词检查节点验证 H3 文档规定的提示词结构。本工作流不加载模型，也没有输出节点。"""
+**简体中文：** 在加载模型前，使用画布规划节点计算合法的 H3 尺寸和帧数；使用提示词检查节点验证 H3 文档规定的提示词结构。本工作流不加载模型。两个“Preview as Text”节点会在画布上显示规划报告和检查结果，同样的文字也会随任务记录在队列和历史中。"""
 
 AV_LATENT_NOTE = """# H3 AV latent tools / H3 音视频潜空间工具
 
-**English:** This chain demonstrates the safe order for H3's paired video and audio latent streams: create, resize video only, split, strictly rejoin, trim both streams together, then inspect the result. It does not decode or save media.
+**English:** This chain demonstrates the safe order for H3's paired video and audio latent streams: create, resize video only, split, strictly rejoin, trim both streams together, then inspect the result in the Preview as Text node. It does not decode or save media.
 
-**简体中文：** 此链路演示 H3 视频与音频成对潜空间的安全处理顺序：创建、仅调整视频尺寸、拆分、严格合并、同步裁剪两个流，最后检查结果。它不会解码或保存媒体。"""
+**简体中文：** 此链路演示 H3 视频与音频成对潜空间的安全处理顺序：创建、仅调整视频尺寸、拆分、严格合并、同步裁剪两个流，最后在“Preview as Text”节点中查看检查结果。它不会解码或保存媒体。"""
 
 AUDIO_REROLL_NOTE = """# Experimental audio reroll / 实验性音频重生成
 
@@ -279,7 +283,7 @@ def _render_workflow(
                 raise ValueError("node '%s' references invalid output %d on '%s'" % (
                     target_key, output_index, source_key))
             output_type = source_outputs[output_index][1]
-            if output_type != input_type:
+            if input_type != ANY_TYPE and output_type != input_type:
                 raise ValueError(
                     "type mismatch: %s.%s expects %s but %s[%d] returns %s"
                     % (target_key, input_name, input_type, source_key, output_index, output_type)
@@ -294,7 +298,7 @@ def _render_workflow(
                 output_index,
                 target_id,
                 input_index,
-                input_type,
+                output_type,
             ])
             input_links[(target_id, input_index)] = link_id
             output_links.setdefault((source_id, output_index), []).append(link_id)
@@ -390,6 +394,24 @@ def _planning_workflow() -> Workflow:
             (),
             "Validate H3 prompt / 检查 H3 提示词",
         ),
+        _node(
+            "planner_preview",
+            "PreviewAny",
+            (60, 700),
+            (480, 260),
+            (),
+            (("source", "planner", 8),),
+            "Planner report / 规划报告",
+        ),
+        _node(
+            "lint_preview",
+            "PreviewAny",
+            (600, 800),
+            (600, 160),
+            (),
+            (("source", "lint", 1),),
+            "Lint result / 检查结果",
+        ),
     )
     return _render_workflow("minimax-h3-planning-and-prompt-lint", specs, 0.8, (40, 20))
 
@@ -458,6 +480,15 @@ def _av_latent_tools_workflow() -> Workflow:
             (),
             (("latent", "trim", 0),),
             "Inspect AV shape and duration / 检查音视频形状和时长",
+        ),
+        _node(
+            "info_preview",
+            "PreviewAny",
+            (2320, 540),
+            (440, 260),
+            (),
+            (("source", "info", 0),),
+            "AV latent report / 音视频潜空间报告",
         ),
     )
     return _render_workflow("minimax-h3-av-latent-tools", specs, 0.65, (20, 40))

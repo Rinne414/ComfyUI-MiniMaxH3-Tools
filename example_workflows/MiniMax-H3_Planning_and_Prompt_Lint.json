@@ -1,8 +1,8 @@
 {
  "id": "minimax-h3-planning-and-prompt-lint",
  "revision": 0,
- "last_node_id": 3,
- "last_link_id": 0,
+ "last_node_id": 5,
+ "last_link_id": 2,
  "nodes": [
   {
    "id": 1,
@@ -24,7 +24,7 @@
     "Node name for S&R": "MarkdownNote"
    },
    "widgets_values": [
-    "# Planning and prompt check / \u89c4\u5212\u4e0e\u63d0\u793a\u8bcd\u68c0\u67e5\n\n**English:** Use the canvas planner to calculate a legal H3 size and frame count before loading models. Use Prompt Lint to validate the documented H3 prompt structure. This workflow does not load a model and has no output node.\n\n**\u7b80\u4f53\u4e2d\u6587\uff1a** \u5728\u52a0\u8f7d\u6a21\u578b\u524d\uff0c\u4f7f\u7528\u753b\u5e03\u89c4\u5212\u8282\u70b9\u8ba1\u7b97\u5408\u6cd5\u7684 H3 \u5c3a\u5bf8\u548c\u5e27\u6570\uff1b\u4f7f\u7528\u63d0\u793a\u8bcd\u68c0\u67e5\u8282\u70b9\u9a8c\u8bc1 H3 \u6587\u6863\u89c4\u5b9a\u7684\u63d0\u793a\u8bcd\u7ed3\u6784\u3002\u672c\u5de5\u4f5c\u6d41\u4e0d\u52a0\u8f7d\u6a21\u578b\uff0c\u4e5f\u6ca1\u6709\u8f93\u51fa\u8282\u70b9\u3002"
+    "# Planning and prompt check / \u89c4\u5212\u4e0e\u63d0\u793a\u8bcd\u68c0\u67e5\n\n**English:** Use the canvas planner to calculate a legal H3 size and frame count before loading models. Use Prompt Lint to validate the documented H3 prompt structure. This workflow does not load a model. The two Preview as Text nodes show the planner report and the lint result on the canvas; the same text is also recorded with the job in the queue and history.\n\n**\u7b80\u4f53\u4e2d\u6587\uff1a** \u5728\u52a0\u8f7d\u6a21\u578b\u524d\uff0c\u4f7f\u7528\u753b\u5e03\u89c4\u5212\u8282\u70b9\u8ba1\u7b97\u5408\u6cd5\u7684 H3 \u5c3a\u5bf8\u548c\u5e27\u6570\uff1b\u4f7f\u7528\u63d0\u793a\u8bcd\u68c0\u67e5\u8282\u70b9\u9a8c\u8bc1 H3 \u6587\u6863\u89c4\u5b9a\u7684\u63d0\u793a\u8bcd\u7ed3\u6784\u3002\u672c\u5de5\u4f5c\u6d41\u4e0d\u52a0\u8f7d\u6a21\u578b\u3002\u4e24\u4e2a\u201cPreview as Text\u201d\u8282\u70b9\u4f1a\u5728\u753b\u5e03\u4e0a\u663e\u793a\u89c4\u5212\u62a5\u544a\u548c\u68c0\u67e5\u7ed3\u679c\uff0c\u540c\u6837\u7684\u6587\u5b57\u4e5f\u4f1a\u968f\u4efb\u52a1\u8bb0\u5f55\u5728\u961f\u5217\u548c\u5386\u53f2\u4e2d\u3002"
    ],
    "title": "How to use / \u4f7f\u7528\u8bf4\u660e"
   },
@@ -95,7 +95,9 @@
     {
      "name": "report",
      "type": "STRING",
-     "links": [],
+     "links": [
+      1
+     ],
      "slot_index": 8
     }
    ],
@@ -138,7 +140,9 @@
     {
      "name": "warnings",
      "type": "STRING",
-     "links": [],
+     "links": [
+      2
+     ],
      "slot_index": 1
     },
     {
@@ -161,9 +165,96 @@
     false
    ],
    "title": "Validate H3 prompt / \u68c0\u67e5 H3 \u63d0\u793a\u8bcd"
+  },
+  {
+   "id": 4,
+   "type": "PreviewAny",
+   "pos": [
+    60,
+    700
+   ],
+   "size": [
+    480,
+    260
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "source",
+     "type": "*",
+     "link": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": [],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "PreviewAny"
+   },
+   "widgets_values": [],
+   "title": "Planner report / \u89c4\u5212\u62a5\u544a"
+  },
+  {
+   "id": 5,
+   "type": "PreviewAny",
+   "pos": [
+    600,
+    800
+   ],
+   "size": [
+    600,
+    160
+   ],
+   "flags": {},
+   "order": 4,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "source",
+     "type": "*",
+     "link": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": [],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "PreviewAny"
+   },
+   "widgets_values": [],
+   "title": "Lint result / \u68c0\u67e5\u7ed3\u679c"
   }
  ],
- "links": [],
+ "links": [
+  [
+   1,
+   2,
+   8,
+   4,
+   0,
+   "STRING"
+  ],
+  [
+   2,
+   3,
+   1,
+   5,
+   0,
+   "STRING"
+  ]
+ ],
  "groups": [],
  "config": {},
  "extra": {

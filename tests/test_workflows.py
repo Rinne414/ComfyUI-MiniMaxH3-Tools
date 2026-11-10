@@ -18,6 +18,7 @@ EXPECTED_NODE_TYPES = {
         "MarkdownNote",
         "MiniMaxH3XCanvasSolver",
         "MiniMaxH3XPromptLint",
+        "PreviewAny",
     },
     "MiniMax-H3_AV_Latent_Tools.json": {
         "MarkdownNote",
@@ -27,6 +28,7 @@ EXPECTED_NODE_TYPES = {
         "MiniMaxH3XJoinAV",
         "MiniMaxH3XTemporalTrim",
         "MiniMaxH3XLatentInfo",
+        "PreviewAny",
     },
     "MiniMax-H3_Audio_Reroll_Experimental.json": {
         "MarkdownNote",
@@ -126,7 +128,7 @@ def _assert_graph_integrity(workflow: Workflow) -> None:
             raise ValueError("link %d references missing target slot" % link_id)
         if source["outputs"][source_slot]["type"] != link_type:
             raise ValueError("link %d source type does not match" % link_id)
-        if target["inputs"][target_slot]["type"] != link_type:
+        if target["inputs"][target_slot]["type"] not in {link_type, "*"}:
             raise ValueError("link %d target type does not match" % link_id)
         if target["inputs"][target_slot]["link"] != link_id:
             raise ValueError("link %d is missing from its target input" % link_id)
@@ -246,3 +248,39 @@ def test_example_workflows_are_a_single_flat_folder() -> None:
     assert entries
     assert all(entry.is_file() and entry.suffix in {".json", ".jpg", ".png"} for entry in entries)
     assert not (REPOSITORY_ROOT / "workflows").exists()
+
+
+OUTPUT_NODE_TYPES = {"PreviewAny", "SaveVideo", "SaveAudio", "SaveImage"}
+
+
+@pytest.mark.parametrize(
+    "path",
+    sorted(WORKFLOW_DIRECTORY.glob("*.json")),
+    ids=lambda path: path.name,
+)
+def test_every_example_has_an_output_node_so_run_does_not_fail(path: Path) -> None:
+    """ComfyUI refuses a prompt without output nodes ("Prompt has no outputs")."""
+    workflow = _load_workflow(path)
+    assert {node["type"] for node in workflow["nodes"]} & OUTPUT_NODE_TYPES
+
+
+def test_planning_previews_show_the_planner_report_and_lint_warnings() -> None:
+    workflow = _load_workflow(
+        WORKFLOW_DIRECTORY / "MiniMax-H3_Planning_and_Prompt_Lint.json")
+    links = _link_tuples(workflow)
+    planner = _node_by_type(workflow, "MiniMaxH3XCanvasSolver")[0]
+    lint = _node_by_type(workflow, "MiniMaxH3XPromptLint")[0]
+    previews = {node["id"] for node in _node_by_type(workflow, "PreviewAny")}
+    assert any(link[1] == planner["id"] and link[2] == 8 and link[3] in previews
+               and link[5] == "STRING" for link in links)
+    assert any(link[1] == lint["id"] and link[2] == 1 and link[3] in previews
+               and link[5] == "STRING" for link in links)
+
+
+def test_av_tools_preview_shows_the_latent_info_report() -> None:
+    workflow = _load_workflow(WORKFLOW_DIRECTORY / "MiniMax-H3_AV_Latent_Tools.json")
+    links = _link_tuples(workflow)
+    info = _node_by_type(workflow, "MiniMaxH3XLatentInfo")[0]
+    preview = _node_by_type(workflow, "PreviewAny")[0]
+    assert any(link[1] == info["id"] and link[2] == 0 and link[3] == preview["id"]
+               for link in links)
