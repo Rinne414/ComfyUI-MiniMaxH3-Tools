@@ -39,8 +39,8 @@ All notable changes to this project are recorded here. The format follows
   open first.
 - The registry description is one plain sentence, and the package declares
   `Operating System :: OS Independent` and a documentation link.
-- The publish workflow pins `Comfy-Org/publish-node-action` to release `1.0.1` (commit SHA)
-  instead of the moving `v1` branch, by commit SHA.
+- The publish workflow pins `Comfy-Org/publish-node-action` to the commit of the
+  `v1` branch that published 0.1.0, instead of the moving `v1` branch.
 - `.github/` is excluded from the registry package.
 
 ## [0.1.0] - 2026-08-04

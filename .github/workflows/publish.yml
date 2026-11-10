@@ -26,8 +26,10 @@ jobs:
 
       - name: Publish custom node
         # This step receives the registry token, so it is pinned to an immutable
-        # commit. The commit is the one release tag 1.0.1 points to.
-        uses: Comfy-Org/publish-node-action@7578cdb0c1410f2515e6f9b1443c6859cab94f05 # 1.0.1
+        # commit. The release tags 1.0.0 and 1.0.1 point to an older revision whose
+        # `comfy --yes env` call current comfy-cli rejects; this is the revision of
+        # the v1 branch that published 0.1.0 (uses `--skip-prompt`).
+        uses: Comfy-Org/publish-node-action@0eb6cd742945443bee7f79eeddd4f732780029a1 # v1 branch head as of 2026-11-11, the revision that published 0.1.0
         with:
           personal_access_token: ${{ secrets.REGISTRY_ACCESS_TOKEN }}
 
