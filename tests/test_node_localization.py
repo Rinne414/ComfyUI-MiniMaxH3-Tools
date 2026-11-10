@@ -22,6 +22,7 @@ from av_latent import (  # noqa: E402
     MiniMaxH3XUpscaleVideoLatent,
 )
 from canvas_solver import MiniMaxH3XCanvasSolver  # noqa: E402
+from image_nodes import get_image_nodes  # noqa: E402
 from nf4_loader import get_nf4_nodes  # noqa: E402
 from prompt_lint import MiniMaxH3XPromptLint  # noqa: E402
 
@@ -40,6 +41,11 @@ EXPECTED_DISPLAY_NAMES = {
     "MiniMaxH3XNF4TextEncoderLoader": "MiniMax H3 NF4 Text Encoder Loader",
     "MiniMaxH3XNF4VideoVAELoader": "MiniMax H3 NF4 Video VAE Loader",
     "MiniMaxH3XNF4AudioVAELoader": "MiniMax H3 NF4 Audio VAE Loader",
+    "MiniMaxH3XImagePromptExpand": "MiniMax H3 Image Prompt Expander",
+    "MiniMaxH3XImageEncodeLowRAM": "MiniMax H3 Image Encode (Low RAM)",
+    "MiniMaxH3XImageSize": "MiniMax H3 Image Size",
+    "MiniMaxH3XSaveConditioning": "MiniMax H3 Save Conditioning",
+    "MiniMaxH3XLoadConditioning": "MiniMax H3 Load Conditioning",
 }
 
 NODES = (
@@ -52,6 +58,7 @@ NODES = (
     MiniMaxH3XTemporalTrim,
     MiniMaxH3XAudioReroll,
     *get_nf4_nodes(),
+    *get_image_nodes(),
 )
 SCHEMAS = {node.define_schema().node_id: node.define_schema() for node in NODES}
 
@@ -61,10 +68,16 @@ NODE_FILES = (
     REPOSITORY_ROOT / "av_latent.py",
     REPOSITORY_ROOT / "audio_reroll.py",
     REPOSITORY_ROOT / "nf4_loader.py",
+    REPOSITORY_ROOT / "image_expand.py",
+    REPOSITORY_ROOT / "image_encode.py",
+    REPOSITORY_ROOT / "image_size.py",
+    REPOSITORY_ROOT / "image_conditioning.py",
 )
 LOCALES_DIRECTORY = REPOSITORY_ROOT / "locales"
 LANGUAGES = ("en", "zh", "zh-TW")
 CHINESE_LANGUAGES = ("zh", "zh-TW")
+# Technical terms that stay in English in every language.
+ENGLISH_TERMS = {"VAE"}
 # Characters that only exist in the Simplified form; they must not appear in zh-TW.
 SIMPLIFIED_ONLY = "视频数图时载档设项认误报检显储规览证译选"
 
@@ -156,7 +169,11 @@ def test_chinese_text_is_chinese_and_en_text_is_not() -> None:
             assert CJK.search(locale[node_id]["display_name"]), (language, node_id)
             assert CJK.search(locale[node_id]["description"]), (language, node_id)
             for input_id, entry in locale[node_id]["inputs"].items():
-                assert CJK.search(entry["name"]), (language, node_id, input_id)
+                assert CJK.search(entry["name"]) or entry["name"] in ENGLISH_TERMS, (
+                    language,
+                    node_id,
+                    input_id,
+                )
                 if "tooltip" in entry:
                     assert CJK.search(entry["tooltip"]), (language, node_id, input_id)
 

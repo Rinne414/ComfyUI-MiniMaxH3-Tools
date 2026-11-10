@@ -307,5 +307,166 @@
         "name": "VAE"
       }
     }
+  },
+  "MiniMaxH3XImagePromptExpand": {
+    "display_name": "MiniMax H3 图像提示词扩写",
+    "description": "实验性。把简短提示词（任何语言）扩写成 MiniMax-H3-Image 需要的详细英文描述，使用官方模板的指令和模型，之后释放模型。关闭时原样输出。",
+    "inputs": {
+      "prompt": {
+        "name": "提示词",
+        "tooltip": "任何语言的简短想法。"
+      },
+      "expand": {
+        "name": "扩写",
+        "tooltip": "关闭时直接使用原提示词，不加载模型。"
+      },
+      "text_model": {
+        "name": "文本模型",
+        "tooltip": "实验性。官方模板使用 qwen3.5_9b_w4a8_gptq（7.3 GB）。"
+      },
+      "seed": {
+        "name": "种子",
+        "tooltip": "相同种子和提示词得到相同的扩写。"
+      },
+      "max_length": {
+        "name": "最大长度",
+        "tooltip": "生成长度上限（包括思考）。"
+      },
+      "images": {
+        "name": "图片"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "提示词"
+      },
+      "1": {
+        "name": "长宽比"
+      },
+      "2": {
+        "name": "报告"
+      },
+      "3": {
+        "name": "原始回复"
+      }
+    }
+  },
+  "MiniMaxH3XImageEncodeLowRAM": {
+    "display_name": "MiniMax H3 图像提示词编码（低内存）",
+    "description": "加载文本编码器、编码提示词和图片后立即释放，让 DiT 在 32 GB 内存中也能加载。提示词不变时直接复用，不再加载编码器。",
+    "inputs": {
+      "clip_name": {
+        "name": "编码器文件",
+        "tooltip": "MiniMax H3 的 Qwen3-VL 文本编码器，推荐 qwen3vl_32b_minimax_h3_int8_convrot；.gguf 文件为实验性（未验证，需要 ComfyUI-GGUF 节点包）。"
+      },
+      "prompt": {
+        "name": "提示词",
+        "tooltip": "最好用详细的英文描述；图片用 <Picture 1> 等指代。"
+      },
+      "use_cache": {
+        "name": "使用缓存",
+        "tooltip": "把编码结果存在 output/h3image_encode_cache，相同提示词和图片以后不再加载编码器，重启后也有效。"
+      },
+      "vae": {
+        "name": "VAE",
+        "tooltip": "编辑时需要，图片也会作为潜空间参考。"
+      },
+      "images": {
+        "name": "图片"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "正向条件"
+      },
+      "1": {
+        "name": "负向条件"
+      },
+      "2": {
+        "name": "报告"
+      }
+    }
+  },
+  "MiniMaxH3XImageSize": {
+    "display_name": "MiniMax H3 图像尺寸",
+    "description": "MiniMax-H3-Image 画布：16 MP 使用模型卡的尺寸表，其他面积用同一公式；边长为 32 的倍数。",
+    "inputs": {
+      "aspect_ratio": {
+        "name": "长宽比"
+      },
+      "megapixels": {
+        "name": "百万像素",
+        "tooltip": "约 4-20 MP 可用，16 MP 效果最好。画布越大耗时越长。"
+      },
+      "suggested_ratio": {
+        "name": "建议长宽比",
+        "tooltip": "提示词扩写建议的长宽比，会取代上面的选项；接了图片时以图片为准。"
+      },
+      "image": {
+        "name": "图片",
+        "tooltip": "编辑时接上原图，会自动使用最接近的长宽比，忽略上面的选项。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "潜空间"
+      },
+      "1": {
+        "name": "宽度"
+      },
+      "2": {
+        "name": "高度"
+      },
+      "3": {
+        "name": "长宽比"
+      }
+    }
+  },
+  "MiniMaxH3XSaveConditioning": {
+    "display_name": "MiniMax H3 保存条件",
+    "description": "把编码后的提示词保存到 output/conditioning。",
+    "inputs": {
+      "conditioning": {
+        "name": "条件"
+      },
+      "name": {
+        "name": "名称"
+      },
+      "overwrite": {
+        "name": "覆盖同名文件",
+        "tooltip": "关闭时重名自动加 _2。"
+      },
+      "prompt": {
+        "name": "提示词",
+        "tooltip": "作为备注保存。"
+      },
+      "text_encoder": {
+        "name": "文本编码器",
+        "tooltip": "作为备注保存。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "文件"
+      }
+    }
+  },
+  "MiniMaxH3XLoadConditioning": {
+    "display_name": "MiniMax H3 加载条件",
+    "description": "加载“保存条件”存下的提示词。",
+    "inputs": {
+      "name": {
+        "name": "名称",
+        "tooltip": "output/conditioning 中的文件名。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "条件"
+      },
+      "1": {
+        "name": "提示词"
+      }
+    }
   }
 }

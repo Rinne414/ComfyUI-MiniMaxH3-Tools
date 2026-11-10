@@ -16,6 +16,7 @@ from av_latent import (  # noqa: E402
     MiniMaxH3XUpscaleVideoLatent,
 )
 from canvas_solver import MiniMaxH3XCanvasSolver  # noqa: E402
+from image_nodes import get_image_nodes  # noqa: E402
 from nf4_loader import get_nf4_nodes  # noqa: E402
 from prompt_lint import MiniMaxH3XPromptLint  # noqa: E402
 
@@ -30,6 +31,7 @@ ALL_NODES = (
     MiniMaxH3XTemporalTrim,
     MiniMaxH3XAudioReroll,
     *NF4_NODES,
+    *get_image_nodes(),
 )
 EXPERIMENTAL_NODES = (MiniMaxH3XAudioReroll, *NF4_NODES)
 

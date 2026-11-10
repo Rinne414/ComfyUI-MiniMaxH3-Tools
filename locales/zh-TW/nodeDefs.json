@@ -307,5 +307,166 @@
         "name": "VAE"
       }
     }
+  },
+  "MiniMaxH3XImagePromptExpand": {
+    "display_name": "MiniMax H3 圖像提示詞擴寫",
+    "description": "實驗性。把簡短的提示詞（任何語言）擴寫成 MiniMax-H3-Image 需要的詳細英文描述，使用官方範本的指令和模型，之後釋放模型。關閉時原樣輸出。",
+    "inputs": {
+      "prompt": {
+        "name": "提示詞",
+        "tooltip": "任何語言的簡短想法。"
+      },
+      "expand": {
+        "name": "擴寫",
+        "tooltip": "關閉時直接使用原本的提示詞，不載入模型。"
+      },
+      "text_model": {
+        "name": "文字模型",
+        "tooltip": "實驗性。官方範本使用 qwen3.5_9b_w4a8_gptq（7.3 GB）。"
+      },
+      "seed": {
+        "name": "種子",
+        "tooltip": "相同的種子和提示詞會得到相同的擴寫。"
+      },
+      "max_length": {
+        "name": "最大長度",
+        "tooltip": "生成長度上限（包含思考）。"
+      },
+      "images": {
+        "name": "圖片"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "提示詞"
+      },
+      "1": {
+        "name": "長寬比"
+      },
+      "2": {
+        "name": "報告"
+      },
+      "3": {
+        "name": "原始回覆"
+      }
+    }
+  },
+  "MiniMaxH3XImageEncodeLowRAM": {
+    "display_name": "MiniMax H3 圖像提示詞編碼（低記憶體）",
+    "description": "載入文字編碼器、編碼提示詞和圖片後立即釋放，讓 DiT 在 32 GB 記憶體中也能載入。提示詞沒有變時直接重用，不再載入編碼器。",
+    "inputs": {
+      "clip_name": {
+        "name": "編碼器檔案",
+        "tooltip": "MiniMax H3 的 Qwen3-VL 文字編碼器，建議用 qwen3vl_32b_minimax_h3_int8_convrot；.gguf 檔案為實驗性（未驗證，需要 ComfyUI-GGUF 節點套件）。"
+      },
+      "prompt": {
+        "name": "提示詞",
+        "tooltip": "最好用詳細的英文描述；圖片用 <Picture 1> 等來指稱。"
+      },
+      "use_cache": {
+        "name": "使用快取",
+        "tooltip": "把編碼結果存在 output/h3image_encode_cache，相同的提示詞和圖片之後不再載入編碼器，重新啟動後也有效。"
+      },
+      "vae": {
+        "name": "VAE",
+        "tooltip": "編輯時需要，圖片也會作為潛空間參考。"
+      },
+      "images": {
+        "name": "圖片"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "正向條件"
+      },
+      "1": {
+        "name": "負向條件"
+      },
+      "2": {
+        "name": "報告"
+      }
+    }
+  },
+  "MiniMaxH3XImageSize": {
+    "display_name": "MiniMax H3 圖像尺寸",
+    "description": "MiniMax-H3-Image 的畫布：16 MP 使用模型卡的尺寸表，其他面積用同一個公式；邊長為 32 的倍數。",
+    "inputs": {
+      "aspect_ratio": {
+        "name": "長寬比"
+      },
+      "megapixels": {
+        "name": "百萬像素",
+        "tooltip": "約 4-20 MP 可用，16 MP 效果最好。畫布越大耗時越長。"
+      },
+      "suggested_ratio": {
+        "name": "建議長寬比",
+        "tooltip": "提示詞擴寫建議的長寬比，會取代上面的選項；接上圖片時以圖片為準。"
+      },
+      "image": {
+        "name": "圖片",
+        "tooltip": "編輯時接上原圖，會自動使用最接近的長寬比，並忽略上面的選項。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "潛空間"
+      },
+      "1": {
+        "name": "寬度"
+      },
+      "2": {
+        "name": "高度"
+      },
+      "3": {
+        "name": "長寬比"
+      }
+    }
+  },
+  "MiniMaxH3XSaveConditioning": {
+    "display_name": "MiniMax H3 儲存條件",
+    "description": "把編碼後的提示詞儲存到 output/conditioning。",
+    "inputs": {
+      "conditioning": {
+        "name": "條件"
+      },
+      "name": {
+        "name": "名稱"
+      },
+      "overwrite": {
+        "name": "覆寫同名檔案",
+        "tooltip": "關閉時，名稱重複會自動加上 _2。"
+      },
+      "prompt": {
+        "name": "提示詞",
+        "tooltip": "作為備註儲存。"
+      },
+      "text_encoder": {
+        "name": "文字編碼器",
+        "tooltip": "作為備註儲存。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "檔案"
+      }
+    }
+  },
+  "MiniMaxH3XLoadConditioning": {
+    "display_name": "MiniMax H3 載入條件",
+    "description": "載入由「儲存條件」存下的提示詞。",
+    "inputs": {
+      "name": {
+        "name": "名稱",
+        "tooltip": "output/conditioning 中的檔名。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "條件"
+      },
+      "1": {
+        "name": "提示詞"
+      }
+    }
   }
 }

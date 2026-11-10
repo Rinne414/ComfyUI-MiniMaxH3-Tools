@@ -307,5 +307,166 @@
         "name": "VAE"
       }
     }
+  },
+  "MiniMaxH3XImagePromptExpand": {
+    "display_name": "MiniMax H3 Image Prompt Expander",
+    "description": "Experimental. Expands a short prompt (any language) into the long English description MiniMax-H3-Image wants, using the instruction and model of the official template, then frees the model. Off: the prompt passes through.",
+    "inputs": {
+      "prompt": {
+        "name": "prompt",
+        "tooltip": "A short idea in any language."
+      },
+      "expand": {
+        "name": "expand",
+        "tooltip": "Off: the prompt is used as it is and no model loads."
+      },
+      "text_model": {
+        "name": "text_model",
+        "tooltip": "Experimental. The official template uses qwen3.5_9b_w4a8_gptq (7.3 GB)."
+      },
+      "seed": {
+        "name": "seed",
+        "tooltip": "Same seed and prompt give the same expansion."
+      },
+      "max_length": {
+        "name": "max_length",
+        "tooltip": "Token budget including the model's thinking."
+      },
+      "images": {
+        "name": "images"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "prompt"
+      },
+      "1": {
+        "name": "aspect_ratio"
+      },
+      "2": {
+        "name": "report"
+      },
+      "3": {
+        "name": "raw_reply"
+      }
+    }
+  },
+  "MiniMaxH3XImageEncodeLowRAM": {
+    "display_name": "MiniMax H3 Image Encode (Low RAM)",
+    "description": "Loads the text encoder, encodes the prompt and pictures, then frees the encoder so the DiT fits in 32 GB RAM. An unchanged prompt is reused without loading the encoder.",
+    "inputs": {
+      "clip_name": {
+        "name": "clip_name",
+        "tooltip": "The MiniMax H3 Qwen3-VL text encoder; recommended: qwen3vl_32b_minimax_h3_int8_convrot. .gguf files are experimental (unverified, need the ComfyUI-GGUF pack)."
+      },
+      "prompt": {
+        "name": "prompt",
+        "tooltip": "A long, detailed English description works best; refer to pictures as <Picture 1>, ..."
+      },
+      "use_cache": {
+        "name": "use_cache",
+        "tooltip": "Keep encoded prompts in output/h3image_encode_cache so the encoder never loads again for the same prompt and pictures, also after a restart."
+      },
+      "vae": {
+        "name": "vae",
+        "tooltip": "The MiniMax-H3-Image VAE; needed for editing so the pictures are also anchored as latents."
+      },
+      "images": {
+        "name": "images"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "positive"
+      },
+      "1": {
+        "name": "negative"
+      },
+      "2": {
+        "name": "report"
+      }
+    }
+  },
+  "MiniMaxH3XImageSize": {
+    "display_name": "MiniMax H3 Image Size",
+    "description": "Canvas for MiniMax-H3-Image: 16 MP uses the model card's table, other areas the same formula; sides are multiples of 32.",
+    "inputs": {
+      "aspect_ratio": {
+        "name": "aspect_ratio"
+      },
+      "megapixels": {
+        "name": "megapixels",
+        "tooltip": "About 4-20 MP works; 16 MP looks best. Larger canvases take longer."
+      },
+      "suggested_ratio": {
+        "name": "suggested_ratio",
+        "tooltip": "The prompt expander's aspect ratio; it replaces the menu. A connected picture wins over it."
+      },
+      "image": {
+        "name": "image",
+        "tooltip": "For edits: connect the picture and the closest aspect ratio is used instead of the menu."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "LATENT"
+      },
+      "1": {
+        "name": "width"
+      },
+      "2": {
+        "name": "height"
+      },
+      "3": {
+        "name": "aspect_ratio"
+      }
+    }
+  },
+  "MiniMaxH3XSaveConditioning": {
+    "display_name": "MiniMax H3 Save Conditioning",
+    "description": "Saves an encoded prompt to output/conditioning.",
+    "inputs": {
+      "conditioning": {
+        "name": "conditioning"
+      },
+      "name": {
+        "name": "name"
+      },
+      "overwrite": {
+        "name": "overwrite",
+        "tooltip": "Off: a taken name gets _2, _3, ..."
+      },
+      "prompt": {
+        "name": "prompt",
+        "tooltip": "Stored as a note."
+      },
+      "text_encoder": {
+        "name": "text_encoder",
+        "tooltip": "Stored as a note."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "file"
+      }
+    }
+  },
+  "MiniMaxH3XLoadConditioning": {
+    "display_name": "MiniMax H3 Load Conditioning",
+    "description": "Loads a prompt saved by Save Conditioning.",
+    "inputs": {
+      "name": {
+        "name": "name",
+        "tooltip": "File name in output/conditioning."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "CONDITIONING"
+      },
+      "1": {
+        "name": "prompt"
+      }
+    }
   }
 }
