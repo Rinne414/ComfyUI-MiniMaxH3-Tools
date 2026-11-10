@@ -50,7 +50,7 @@ jobs:
       - name: Verify generated workflows
         run: |
           python scripts/generate_example_workflows.py
-          git diff --exit-code -- workflows
+          git diff --exit-code -- example_workflows
 
       - name: Run tests
         run: python -m pytest tests -q

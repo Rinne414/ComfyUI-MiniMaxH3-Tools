@@ -210,7 +210,7 @@ describe that experiment only.
 
 ## Example workflows
 
-The files under `workflows/` can be dragged directly into ComfyUI:
+The files under `example_workflows/` appear in ComfyUI's template browser and can also be dragged directly into the editor:
 
 | Workflow | Purpose | Model required |
 |---|---|---|
@@ -258,7 +258,7 @@ BitsAndBytes CUDA round trips.
 |---|---|
 | `*.py` | Installable ComfyUI extension and twelve nodes |
 | `tests/` | Behavior tests |
-| `workflows/` | Loadable planning, AV-latent, reroll, and advanced generation workflows |
+| `example_workflows/` | Loadable planning, AV-latent, reroll, and advanced generation workflows |
 | `docs/` | Node-specific experimental findings |
 | `research/` | Single-machine calibration data and reproduction scripts |
 

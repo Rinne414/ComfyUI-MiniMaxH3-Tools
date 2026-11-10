@@ -247,7 +247,7 @@ both already implement it well and this repo deliberately does not duplicate the
 | `h3_calibration.csv` | Raw measurements, one row per point |
 | `h3_bench.py` | The sweep harness (resumable, OOM-aware) |
 | `h3_report.py` | CSV → the Markdown tables above |
-| `../workflows/MiniMax-H3_AV_Advanced.json` | ComfyUI workflow: three-field prompt composer, correct int8 encoder, exposed sigma shift, separate audio track |
+| `../example_workflows/MiniMax-H3_AV_Advanced.json` | ComfyUI workflow: three-field prompt composer, correct int8 encoder, exposed sigma shift, separate audio track |
 | `h3_advanced_api.json` | Same graph in API format, for scripted runs |
 | `h3_run.py` | Single-shot runner: `h3_run.py <graph> [megapixels] [seconds]` |
 

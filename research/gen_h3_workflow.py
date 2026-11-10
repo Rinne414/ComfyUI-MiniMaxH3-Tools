@@ -346,7 +346,7 @@ def main():
         "version": 0.4,
     }
     out_dir = os.environ.get(
-        "H3_WORKFLOW_DIR", os.path.join(REPOSITORY_ROOT, "workflows"))
+        "H3_WORKFLOW_DIR", os.path.join(REPOSITORY_ROOT, "example_workflows"))
     os.makedirs(out_dir, exist_ok=True)
     ui_path = os.path.join(out_dir, "MiniMax-H3_AV_Advanced.json")
     with open(ui_path, "w", encoding="utf-8") as f:

@@ -45,7 +45,7 @@ class WorkflowNodeRequired(TypedDict):
     mode: int
     inputs: list[WorkflowInput]
     outputs: list[WorkflowOutput]
-    properties: dict[str, str]
+    properties: dict[str, str | list[dict[str, str]]]
     widgets_values: list[WidgetValue]
 
 
@@ -64,6 +64,36 @@ class Workflow(TypedDict):
     config: dict[str, str]
     extra: dict[str, dict[str, float | list[int]]]
     version: float
+
+
+MODEL_REPOSITORY_URL = "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main"
+
+# Loader file name -> folder inside the Comfy-Org/MiniMax-H3 repository and in
+# ComfyUI's models directory. ComfyUI shows a download link for a missing file.
+MODEL_DIRECTORIES: dict[str, str] = {
+    "minimax_h3_fl2va_pruned_int8_convrot.safetensors": "diffusion_models",
+    "minimax_h3_ref2va_pruned_int8_convrot.safetensors": "diffusion_models",
+    "qwen3vl_32b_minimax_h3_int8_convrot.safetensors": "text_encoders",
+    "minimax_h3_video_vae_fp16.safetensors": "vae",
+    "minimax_h3_audio_vae_fp32.safetensors": "vae",
+}
+LOADER_TYPES = frozenset({"UNETLoader", "CLIPLoader", "VAELoader"})
+
+
+def model_download_properties(
+        node_type: str, widgets: tuple[WidgetValue, ...]) -> list[dict[str, str]]:
+    """Return the ``properties.models`` entry for a loader, or an empty list."""
+    if node_type not in LOADER_TYPES or not widgets:
+        return []
+    name = widgets[0]
+    directory = MODEL_DIRECTORIES.get(str(name))
+    if directory is None:
+        return []
+    return [{
+        "name": str(name),
+        "url": "%s/%s/%s" % (MODEL_REPOSITORY_URL, directory, name),
+        "directory": directory,
+    }]
 
 
 NODE_SCHEMAS: dict[str, NodeSchema] = {
@@ -302,6 +332,9 @@ def _render_workflow(
             "properties": {"Node name for S&R": node_type},
             "widgets_values": list(widgets),
         }
+        models = model_download_properties(node_type, widgets)
+        if models:
+            node["properties"]["models"] = models
         if title is not None:
             node["title"] = title
         nodes.append(node)
@@ -685,7 +718,7 @@ def write_workflows(
 
 def main() -> int:
     repository_root = Path(__file__).resolve().parents[1]
-    paths = write_workflows(repository_root / "workflows", build_workflows())
+    paths = write_workflows(repository_root / "example_workflows", build_workflows())
     for path in paths:
         print(path)
     return 0

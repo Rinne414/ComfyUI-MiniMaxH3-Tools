@@ -11,7 +11,7 @@ import pytest
 from scripts.generate_example_workflows import Workflow, WorkflowNode, build_workflows
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW_DIRECTORY = REPOSITORY_ROOT / "workflows"
+WORKFLOW_DIRECTORY = REPOSITORY_ROOT / "example_workflows"
 
 EXPECTED_NODE_TYPES = {
     "MiniMax-H3_Planning_and_Prompt_Lint.json": {
@@ -214,3 +214,35 @@ def test_workflow_titles_and_notes_are_bilingual(path: Path) -> None:
             path.name, note["id"])
         assert "简体中文" in note_text, (
             "%s note %d must contain Simplified Chinese" % (path.name, note["id"]))
+
+
+LOADER_TYPES = {"UNETLoader", "CLIPLoader", "VAELoader"}
+MODEL_URL_PREFIX = "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/"
+
+
+@pytest.mark.parametrize(
+    "path",
+    sorted(WORKFLOW_DIRECTORY.glob("*.json")),
+    ids=lambda path: path.name,
+)
+def test_loader_nodes_carry_a_verified_download_link(path: Path) -> None:
+    workflow = _load_workflow(path)
+    loaders = [node for node in workflow["nodes"] if node["type"] in LOADER_TYPES]
+    for node in loaders:
+        file_name = node["widgets_values"][0]
+        models = node["properties"]["models"]
+        assert models == [
+            {
+                "name": file_name,
+                "url": "%s%s/%s" % (MODEL_URL_PREFIX, models[0]["directory"], file_name),
+                "directory": models[0]["directory"],
+            }
+        ]
+        assert models[0]["directory"] in {"diffusion_models", "text_encoders", "vae"}
+
+
+def test_example_workflows_are_a_single_flat_folder() -> None:
+    entries = list(WORKFLOW_DIRECTORY.iterdir())
+    assert entries
+    assert all(entry.is_file() and entry.suffix in {".json", ".jpg", ".png"} for entry in entries)
+    assert not (REPOSITORY_ROOT / "workflows").exists()
