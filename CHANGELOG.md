@@ -35,7 +35,8 @@ examples and a Chinese README.
   - `MiniMax H3 Save Conditioning` and `MiniMax H3 Load Conditioning` keep an
     encoded prompt in `output/conditioning` (safetensors, no pickle).
   - Example workflows for text to image, editing one picture, and editing with a
-    second reference picture.
+    second reference picture. The expander's seed is fixed in them so its cache
+    can hit, and its report names the instruction file it used.
 - Node search finds every node by English and Simplified Chinese terms such as
   `h3`, `canvas`, `17k+5`, `nf4`, `prompt lint`, `画布` and `提示词检查`.
 - The four NF4 loaders and Audio Reroll carry ComfyUI's experimental badge.
@@ -87,19 +88,20 @@ examples and a Chinese README.
 - The NF4 loaders no longer write a fresh copy of every weight back into system
   RAM on each run. Weights now reach the GPU through ComfyUI's own loading path,
   as core models' weights do. Measured on the NF4 text encoder: 13.3 GB resident
-  before, about 2.1 GB after. The NF4 diffusion model and video VAE are not
-  confirmed; see Known limits.
+  before, about 2.1 GB after.
 - The NF4 video VAE loader no longer makes ComfyUI allocate about 9 GB of float32
   zeros in system RAM while loading. Under dynamic VRAM, core filled every NF4
   weight missing from the state dict with a full-size float32 tensor (36 blocks
   x 67,108,864 values x 4 bytes = 9,216 MiB). Each NF4 weight is now passed as
-  a 4-byte placeholder with its logical shape. Fixed in code with tests; the
-  real-model result is pending (see Known limits).
+  a 4-byte placeholder with its logical shape. Measured: load, encode and decode
+  of 5 frames at 256x256 took 4.0 s with a peak of 2.0 GB resident RAM, against
+  10 GB before.
 - The NF4 diffusion model loader now gives ComfyUI's dynamic VRAM the same
   fast-disk storage policy that core's own loaders pass. Before, every staged
   weight was first copied into pinned host RAM, which grew host memory on the
-  first sampling step until core's pin budget stopped it. Fixed in code with
-  tests; the real-model result is pending (see Known limits).
+  first sampling step until core's pin budget stopped it. Measured (5 frames, 2
+  steps, 256x256): both steps ran with a peak of 2.6 GB resident RAM, against
+  10.6 GB within 4 s before.
 - Torch Compile, hook and multi-GPU nodes can rebuild an NF4 model or text
   encoder instead of failing with
   `unexpected keyword argument 'disable_dynamic'`.
@@ -107,7 +109,7 @@ examples and a Chinese README.
   Under dynamic VRAM it used to be ignored without a word. Verified on the
   dynamic VRAM path only.
 - The NF4 video VAE no longer fails with `--fast fp16_accumulation` (checked by
-  tests only; no decode was run, see Known limits).
+  tests only; see Known limits).
 - Split AV Latent, Join AV Latent, Temporal Trim and Upscale Video Latent keep a
   latent's noise mask instead of dropping it. Split gives each stream its own
   mask, Join puts them back together, and Temporal Trim cuts the mask to the
@@ -115,32 +117,35 @@ examples and a Chinese README.
 
 ### Verified on real models
 
-RTX 3090, 32 GB of RAM, ComfyUI at commit `ede4e5fe8`:
+RTX 3090, 32 GB of RAM, ComfyUI at commit `ede4e5fe8`, this pack at `c77db71`:
 
 - NF4 text encoder: one encode took 7.0 s, with about 2.1 GB of RAM resident at
   the peak and 14.6 GB of VRAM at the peak.
+- NF4 diffusion model (5 frames, 2 steps, 256x256): the log shows
+  `fast_disk=True`; both steps ran (2.53 it/s after initialisation); peak
+  resident RAM 2.6 GB, minimum available RAM 13.2 GB.
+- NF4 video VAE (load, encode and decode of 5 frames at 256x256): 4.0 s, peak
+  resident RAM 2.0 GB, minimum available RAM 14.1 GB, decode correct (28.3 dB
+  PSNR against the input).
 - A LoRA on an NF4 model stops at the sampler with a plain message (dynamic VRAM
   path).
-- The NF4 diffusion model loads and reaches the start of sampling without the
-  `_combined_linear` `AttributeError`.
 - `tests/test_nf4_cuda.py` passes 5 of 5 on the GPU. It needs the pack folder on
   `PYTHONPATH`.
 - In the ComfyUI frontend the experimental badge shows on the canvas, the
   Templates browser lists the pack's templates, and the missing-model dialog
   offers Download buttons for `MiniMax-H3_AV_Advanced`.
+- H3-Image at 4 MP, w4a8 model, total time: 78 s on the first run with the Prompt
+  Expander on (expansion 56 s, encode 6.4 s, then sampling); 16 s with expansion
+  and encode cached in a fresh process; 11 s with the model already loaded; about
+  20 s with the expander off and a new prompt. Editing: 28 s with one picture, 36
+  s with two. Peak resident RAM 5.0 to 5.4 GB, minimum available RAM about 10 GB.
 
 ### Known limits
 
-- NF4 diffusion model: on 32 GB of RAM its resident memory rose from 2.2 GB to
-  10.6 GB within about 4 s of the start of sampling, and the test's safety limit
-  stopped the run. No step completed, so speed and peak RAM on the current core
-  are unknown. The cause was found (staged weights were copied into pinned host
-  RAM) and fixed in code with tests. Real-model confirmation: pending.
-- NF4 video VAE: resident memory rose to 10 GB during loading, and the test was
-  stopped before any decode. The cause was found (core allocated float32 zeros
-  for every NF4 layer) and fixed in code with tests. Real-model confirmation:
-  pending.
-- The LoRA message on the legacy (non-dynamic) patcher path is unverified.
+- Not measured: the NF4 diffusion model at a real video size and length (only
+  256x256, 5 frames, 2 steps were run).
+- Not verified: `--fast fp16_accumulation` together with the NF4 video VAE, and
+  the LoRA message on the legacy (non-dynamic) patcher path.
 - The NF4 diffusion model and video VAE loaders stay experimental. The NF4 versus
   INT8 table in the README was measured on ComfyUI 0.30.0 in August 2026 and is
   labelled as such.

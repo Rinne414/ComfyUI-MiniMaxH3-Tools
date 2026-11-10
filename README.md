@@ -84,12 +84,22 @@ workflows carry these download links:
 | `MiniMax-H3-Image_Edit_Low_RAM.json` | Edit one picture. The Prompt Expander is off, so faces, hair and text stay as you wrote them |
 | `MiniMax-H3-Image_Edit_Two_Pictures_Low_RAM.json` | Edit with a second reference picture (`<Picture 1>` and `<Picture 2>`) |
 
-**Measured** on one machine (RTX 3090 24 GB, 32 GB RAM, w4a8 model, 6 steps, cfg 1):
+**Measured** on one machine (RTX 3090 24 GB, 32 GB RAM, w4a8 model, 6 steps, cfg 1).
+Text to image at 4 MP, total time:
 
-- 4096x4096: 46 s, about 18 GB of VRAM
-- 21 MP: 62 s
-- 4 MP: about 20 s
-- text encoding of a new prompt: about 7.5 s; an unchanged prompt is not encoded again
+- first run with the Prompt Expander on: 78 s (expansion 56 s, encode 6.4 s, then
+  sampling)
+- expansion and encode both cached, fresh process: 16 s
+- model already loaded: 11 s
+- Prompt Expander off, new prompt: about 20 s (encode about 7.5 s)
+
+Editing at 4 MP: 28 s with one picture, 36 s with two.
+
+Peak resident RAM was 5.0 to 5.4 GB, and the minimum available RAM was about
+10 GB on the 32 GB PC.
+
+Larger canvases (sampling and decode, measured earlier the same day): 4096x4096
+in 46 s with about 18 GB of VRAM, and 21 MP in 62 s.
 
 Treat these as one tested configuration, not a promise for other hardware.
 
@@ -100,7 +110,9 @@ MiniMax-H3-Image template installed with ComfyUI (the `comfyui-workflow-template
 package that ComfyUI `0.45.0` installs). If that template cannot be found, the
 node says so in its report and passes your prompt through unchanged; nothing loads.
 Expansion can change faces, hair and text on a picture, so it is off in the edit
-examples.
+examples. The examples keep its seed fixed, so an unchanged idea comes from the
+cache instead of expanding again; with a changing seed every Queue would expand
+again. Its report names the instruction file it used.
 
 **GGUF text encoders (experimental, unverified).** With ComfyUI-GGUF `6ea2651`
 the stock load path copied a 14.6 GB `Q4_K_M` file into host RAM on a 32 GB PC and
@@ -202,15 +214,21 @@ Component-isolation runs also verified the NF4 Qwen3-VL encoder and both VAEs.
 #### Verified on the current core
 
 Checked on real models with an RTX 3090 and 32 GB of RAM, ComfyUI at commit
-`ede4e5fe8`:
+`ede4e5fe8`, this pack at `c77db71`:
 
 - NF4 text encoder: one encode took 7.0 s, with about 2.1 GB of RAM resident at
   the peak and 14.6 GB of VRAM at the peak. Before the fixes in 0.2.0 the same
   encode left 13.3 GB resident.
+- NF4 diffusion model (5 frames, 2 steps, 256x256): the log shows
+  `fast_disk=True` and both steps ran (2.53 it/s after initialisation). Peak
+  resident RAM was 2.6 GB and the minimum available RAM was 13.2 GB. Before the
+  fix, resident RAM reached 10.6 GB within 4 s of the start of sampling.
+- NF4 video VAE (load, encode and decode of 5 frames at 256x256): 4.0 s, peak
+  resident RAM 2.0 GB, minimum available RAM 14.1 GB, and the decode is correct
+  (28.3 dB PSNR against the input). Before the fix, resident RAM reached 10 GB
+  while loading.
 - A LoRA on an NF4 model stops the run at the sampler with a plain message (the
   dynamic VRAM path).
-- The NF4 diffusion model loads and reaches the start of sampling without the
-  earlier `_combined_linear` `AttributeError`.
 - `tests/test_nf4_cuda.py` passes 5 of 5 on the GPU.
 - In the ComfyUI frontend the experimental badge shows on the canvas, the
   Templates browser lists this pack's templates, and the missing-model dialog
@@ -218,21 +236,15 @@ Checked on real models with an RTX 3090 and 32 GB of RAM, ComfyUI at commit
 
 #### Known limits
 
-Not verified on the current core:
+Not verified:
 
-- NF4 diffusion model: on 32 GB of RAM its resident memory rose from 2.2 GB to
-  10.6 GB within about 4 s of the start of sampling, and the test's safety limit
-  stopped the run. No step completed, so speed and peak RAM are unknown. The
-  cause was found (staged weights were copied into pinned host RAM) and fixed in
-  code with tests. Real-model confirmation: pending.
-- NF4 video VAE: resident memory rose to 10 GB while loading, and the test was
-  stopped before any decode. Decoding with it is unverified. The cause was found
-  (core allocated float32 zeros for every NF4 layer) and fixed in code with
-  tests. Real-model confirmation: pending.
-- The LoRA message on the legacy (non-dynamic) patcher path is unverified.
+- the NF4 diffusion model at a real video size and length (only 256x256, 5
+  frames, 2 steps were run, so real speed and peak RAM are not measured)
+- `--fast fp16_accumulation` together with the NF4 video VAE
+- the LoRA message on the legacy (non-dynamic) patcher path
 
-Because of this, the NF4 diffusion model and NF4 video VAE loaders stay
-experimental, and the table above is not a current benchmark.
+The NF4 diffusion model and NF4 video VAE loaders stay experimental, and the NF4
+versus INT8 table above is not a current benchmark.
 
 Also:
 
