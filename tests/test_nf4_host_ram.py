@@ -60,6 +60,20 @@ def _nf4_video_vae_state_dict() -> dict[str, torch.Tensor]:
     return state_dict
 
 
+def _load_until_the_nf4_swap() -> None:
+    try:
+        nf4_loader._load_nf4_vae("vae.safetensors", _nf4_video_vae_state_dict())
+    except _Stop:
+        return
+    except RuntimeError as error:
+        # Older cores (the weekly CI job's pinned one) only detect a full H3 VAE
+        # and always build all 36 blocks, too large for a unit test.
+        if "VAE is invalid" in str(error):
+            pytest.skip("this ComfyUI does not build a decoder-only H3 video VAE")
+        raise
+    pytest.fail("the loader never reached the NF4 swap")
+
+
 def test_placeholders_keep_logical_shapes_and_cost_no_memory() -> None:
     state_dict = _nf4_video_vae_state_dict()
     keys = set(state_dict)
@@ -95,8 +109,7 @@ def test_core_vae_build_does_not_allocate_the_nf4_layers(monkeypatch) -> None:
 
     monkeypatch.setattr(nf4_loader, "_replace_quantized_linears", swap_and_stop)
 
-    with pytest.raises(_Stop):
-        nf4_loader._load_nf4_vae("vae.safetensors", _nf4_video_vae_state_dict())
+    _load_until_the_nf4_swap()
 
     assert set(held_bytes) == set(NF4_WEIGHTS)
     assert max(held_bytes.values()) <= 4, f"core built the NF4 layers: {held_bytes}"
@@ -121,6 +134,5 @@ def test_core_vae_build_still_works_without_dynamic_vram(monkeypatch) -> None:
 
     monkeypatch.setattr(nf4_loader, "_replace_quantized_linears", swap_and_stop)
 
-    with pytest.raises(_Stop):
-        nf4_loader._load_nf4_vae("vae.safetensors", _nf4_video_vae_state_dict())
+    _load_until_the_nf4_swap()
     assert swapped == [len(NF4_WEIGHTS)]
