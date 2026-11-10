@@ -14,16 +14,11 @@ jobs:
   publish-node:
     name: Publish to Comfy Registry
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
-      - name: Check out extension
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-
+      # The action checks out the repository and installs its own Python (3.10),
+      # which then stays first on PATH for the rest of this job. Nothing else runs
+      # here; the registry check below has its own job and its own Python.
       - name: Publish custom node
         # This step receives the registry token, so it is pinned to an immutable
         # commit. The release tags 1.0.0 and 1.0.1 point to an older revision whose
@@ -33,5 +28,19 @@ jobs:
         with:
           personal_access_token: ${{ secrets.REGISTRY_ACCESS_TOKEN }}
 
-      - name: Confirm the registry lists this version as latest and active
+  verify-release:
+    name: Confirm the registry lists this version as latest and active
+    needs: publish-node
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out extension
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Check the registry
         run: python scripts/verify_registry_release.py
