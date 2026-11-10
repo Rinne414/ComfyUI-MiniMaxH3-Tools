@@ -164,6 +164,24 @@ def _nf4_parameter_type() -> type[torch.nn.Parameter]:
     return _ComfyNF4Params4bit
 
 
+WEIGHT_PATCHES_UNSUPPORTED = (
+    "MiniMax H3 NF4 models cannot use LoRA or other weight patches: they cannot "
+    "be added to 4-bit NF4 weights, so they would have no effect. Remove the LoRA "
+    "from this model, or use a non-NF4 MiniMax H3 model for it."
+)
+
+
+def _has_weight_patches(module: torch.nn.Module) -> bool:
+    """Whether core attached a patch: weight_function (legacy low VRAM) or
+    weight_lowvram_function (dynamic VRAM), for the weight or the bias."""
+    return bool(
+        module.weight_function
+        or module.bias_function
+        or getattr(module, "weight_lowvram_function", None) is not None
+        or getattr(module, "bias_lowvram_function", None) is not None
+    )
+
+
 class _NF4Linear(torch.nn.Module):
     """Linear shell that accepts full-precision or pre-quantized BnB weights."""
 
@@ -298,11 +316,8 @@ class _NF4Linear(torch.nn.Module):
             raise RuntimeError(
                 f"NF4 Linear {self.out_features}x{self.in_features} has no loaded weight"
             )
-        if self.weight_function or self.bias_function:
-            raise RuntimeError(
-                "LoRA and weight-function patches are not supported on MiniMax H3 "
-                "BitsAndBytes NF4 Linear layers"
-            )
+        if _has_weight_patches(self):
+            raise RuntimeError(WEIGHT_PATCHES_UNSUPPORTED)
         if self.is_nf4:
             return self._forward_nf4(inputs)
         return self._forward_dense(inputs)
@@ -371,6 +386,10 @@ class _NF4Linear(torch.nn.Module):
         del inplace_update, seed
         if return_weight:
             return weight
+        # A legacy full load merges a LoRA here: core computed it on the packed
+        # codes cast to a float dtype, which cannot be stored back as NF4.
+        if self.weight is not None and weight.dtype != self.weight.dtype:
+            raise RuntimeError(WEIGHT_PATCHES_UNSUPPORTED)
         parameter_type = _nf4_parameter_type()
         if not isinstance(weight, parameter_type) or weight.quant_state is None:
             raise TypeError(
