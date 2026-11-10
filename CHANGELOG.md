@@ -24,7 +24,7 @@ All notable changes to this project are recorded here. The format follows
 - `README_zh.md`, a Simplified Chinese README.
 - Bug report and feature request templates, a changelog, and a weekly CI run
   against both the pinned ComfyUI commit and ComfyUI master.
-- The publish workflow confirms that the Comfy Registry lists the published
+- The publish workflow skips a version that is already on the registry, and confirms that the Comfy Registry lists the published
   version as the latest and active one.
 
 ### Changed

@@ -11,8 +11,32 @@ permissions:
   contents: read
 
 jobs:
+  check-version:
+    name: Check whether this version is already published
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+    steps:
+      - name: Check out extension
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      # Any pyproject.toml change triggers this workflow, so a version that is
+      # already on the registry is skipped here instead of failing on a duplicate.
+      # An unreadable registry answer fails the job and publishes nothing.
+      - name: Compare pyproject.toml with the registry
+        id: decide
+        run: python scripts/registry_release.py decide
+
   publish-node:
     name: Publish to Comfy Registry
+    needs: check-version
+    if: needs.check-version.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -30,7 +54,8 @@ jobs:
 
   verify-release:
     name: Confirm the registry lists this version as latest and active
-    needs: publish-node
+    needs: [check-version, publish-node]
+    if: needs.check-version.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -43,4 +68,4 @@ jobs:
           python-version: "3.11"
 
       - name: Check the registry
-        run: python scripts/verify_registry_release.py
+        run: python scripts/registry_release.py

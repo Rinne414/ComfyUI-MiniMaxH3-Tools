@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.verify_registry_release import (
+import pytest
+
+from scripts.registry_release import (
     ACTIVE_STATUS,
+    decide_publish,
     describe_problem,
+    run_decide,
     read_pack,
     wait_for_release,
 )
@@ -103,8 +107,8 @@ def test_registry_check_runs_in_its_own_job_on_python_3_11() -> None:
     jobs = _workflow("publish.yml")["jobs"]
     publish, verify = jobs["publish-node"], jobs["verify-release"]
     assert "publish-node" in verify["needs"]
-    assert all("verify_registry_release" not in str(step) for step in publish["steps"])
-    assert any("verify_registry_release.py" in str(step.get("run", "")) for step in verify["steps"])
+    assert all("registry_release" not in str(step) for step in publish["steps"])
+    assert any("registry_release.py" in str(step.get("run", "")) for step in verify["steps"])
     assert _python_versions(verify) == ["3.11"]
     assert "secrets." not in str(verify)
 
@@ -115,3 +119,62 @@ def test_the_script_only_needs_the_python_the_verify_job_sets() -> None:
     ci_versions = _python_versions(_workflow("ci.yml")["jobs"]["verify"])
     assert ci_versions == [version]
     assert tuple(int(part) for part in version.split(".")) >= (3, 11)
+
+
+def test_a_version_already_on_the_registry_is_not_published() -> None:
+    payload = [{"version": "0.1.0", "status": ACTIVE_STATUS}]
+    should_publish, reason = decide_publish("0.1.0", payload)
+    assert should_publish is False
+    assert "already on the registry" in reason
+
+
+def test_a_new_version_is_published() -> None:
+    payload = [{"version": "0.1.0"}, {"version": "0.1.1"}]
+    assert decide_publish("0.2.0", payload)[0] is True
+
+
+def test_a_node_the_registry_does_not_know_yet_is_published() -> None:
+    assert decide_publish("0.1.0", [])[0] is True
+
+
+@pytest.mark.parametrize("payload", [None, {}, {"message": "error"}, "oops", [1, 2]])
+def test_an_unexpected_answer_is_an_error_not_a_reason_to_publish(payload: object) -> None:
+    with pytest.raises(ValueError):
+        decide_publish("0.1.0", payload)
+
+
+def test_decide_writes_the_job_output(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    output = tmp_path / "github_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setattr(
+        "scripts.registry_release.fetch_versions", lambda _: [{"version": "0.1.0"}]
+    )
+    assert run_decide("minimax-h3-tools", "0.1.0") == 0
+    assert output.read_text(encoding="utf-8") == "publish=false\n"
+    monkeypatch.setattr("scripts.registry_release.fetch_versions", lambda _: [])
+    assert run_decide("minimax-h3-tools", "0.1.0") == 0
+    assert output.read_text(encoding="utf-8") == "publish=false\npublish=true\n"
+
+
+def test_decide_fails_loudly_and_publishes_nothing_on_an_api_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    output = tmp_path / "github_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+
+    def broken(_: str) -> list:
+        raise OSError("HTTP Error 503")
+
+    monkeypatch.setattr("scripts.registry_release.fetch_versions", broken)
+    assert run_decide("minimax-h3-tools", "0.1.0") == 1
+    assert "::error::" in capsys.readouterr().out
+    assert not output.exists()
+
+
+def test_publish_and_verify_jobs_wait_for_the_version_check() -> None:
+    jobs = _workflow("publish.yml")["jobs"]
+    assert jobs["publish-node"]["needs"] == "check-version"
+    assert "publish == 'true'" in jobs["publish-node"]["if"]
+    assert "check-version" in jobs["verify-release"]["needs"]
+    assert "publish == 'true'" in jobs["verify-release"]["if"]
+    assert "secrets." not in str(jobs["check-version"])
