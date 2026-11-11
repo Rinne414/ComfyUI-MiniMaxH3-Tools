@@ -178,3 +178,44 @@ def test_publish_and_verify_jobs_wait_for_the_version_check() -> None:
     assert "check-version" in jobs["verify-release"]["needs"]
     assert "publish == 'true'" in jobs["verify-release"]["if"]
     assert "secrets." not in str(jobs["check-version"])
+
+
+def test_pending_review_is_recognised_only_for_the_wanted_version():
+    from scripts.registry_release import is_pending_review
+
+    payload = [
+        {"version": "0.2.0", "status": "NodeVersionStatusPending"},
+        {"version": "0.1.0", "status": "NodeVersionStatusActive"},
+    ]
+
+    assert is_pending_review("0.2.0", payload)
+    assert not is_pending_review("0.1.0", payload)
+    assert not is_pending_review("0.3.0", payload)
+    assert not is_pending_review("0.2.0", {"error": "boom"})
+
+
+def test_verify_passes_with_a_warning_while_the_version_is_in_review(monkeypatch, capsys):
+    from scripts import registry_release
+
+    monkeypatch.setattr(registry_release, "wait_for_release", lambda *_: "latest is old")
+    monkeypatch.setattr(
+        registry_release,
+        "fetch_review_versions",
+        lambda _: [{"version": registry_release.read_pack(REPOSITORY_ROOT / "pyproject.toml")[1], "status": "NodeVersionStatusPending"}],
+    )
+
+    assert registry_release.main(["verify"]) == 0
+    assert "::warning::" in capsys.readouterr().out
+
+
+def test_verify_fails_when_the_version_was_flagged(monkeypatch):
+    from scripts import registry_release
+
+    monkeypatch.setattr(registry_release, "wait_for_release", lambda *_: "latest is old")
+    monkeypatch.setattr(
+        registry_release,
+        "fetch_review_versions",
+        lambda _: [{"version": registry_release.read_pack(REPOSITORY_ROOT / "pyproject.toml")[1], "status": "NodeVersionStatusFlagged"}],
+    )
+
+    assert registry_release.main(["verify"]) == 1

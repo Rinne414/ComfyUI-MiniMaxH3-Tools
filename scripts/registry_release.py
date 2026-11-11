@@ -1,7 +1,8 @@
 """Release checks against the Comfy Registry.
 
 ``decide``  says whether the version in pyproject.toml still has to be published.
-``verify``  fails unless the registry lists that version as the latest and active one.
+``verify``  fails unless the registry lists that version as the latest and active one;
+            a version still waiting for the registry's review passes with a warning.
 """
 
 from __future__ import annotations
@@ -18,6 +19,13 @@ from pathlib import Path
 REGISTRY_URL = "https://api.comfy.org/nodes/%s"
 VERSIONS_URL = "https://api.comfy.org/nodes/%s/versions"
 ACTIVE_STATUS = "NodeVersionStatusActive"
+PENDING_STATUS = "NodeVersionStatusPending"
+REVIEW_STATUSES = (
+    PENDING_STATUS,
+    ACTIVE_STATUS,
+    "NodeVersionStatusFlagged",
+    "NodeVersionStatusBanned",
+)
 POLL_SECONDS = 20
 TIMEOUT_SECONDS = 600
 REQUEST_TIMEOUT_SECONDS = 30
@@ -45,6 +53,29 @@ def fetch_versions(node_id: str) -> list:
     )
     with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
         return json.load(response)
+
+
+def fetch_review_versions(node_id: str) -> list:
+    """Return every version with its review status, pending and flagged ones included."""
+    query = "&".join("statuses=%s" % status for status in REVIEW_STATUSES)
+    request = urllib.request.Request(
+        "%s?%s" % (VERSIONS_URL % node_id, query),
+        headers={"User-Agent": "registry-release-check"},
+    )
+    with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+        return json.load(response)
+
+
+def is_pending_review(version: str, payload: object) -> bool:
+    """True when the registry holds the version but has not finished reviewing it."""
+    if not isinstance(payload, list):
+        return False
+    return any(
+        isinstance(item, dict)
+        and item.get("version") == version
+        and item.get("status") == PENDING_STATUS
+        for item in payload
+    )
 
 
 def decide_publish(version: str, payload: object) -> tuple[bool, str]:
@@ -111,6 +142,13 @@ def run_decide(node_id: str, version: str) -> int:
     return 0
 
 
+def _still_in_review(node_id: str, version: str) -> bool:
+    try:
+        return is_pending_review(version, fetch_review_versions(node_id))
+    except (OSError, ValueError):
+        return False
+
+
 def main(argv: list[str] | None = None) -> int:
     command = (argv if argv is not None else sys.argv[1:]) or ["verify"]
     if command not in (["decide"], ["verify"]):
@@ -120,6 +158,12 @@ def main(argv: list[str] | None = None) -> int:
     if command == ["decide"]:
         return run_decide(node_id, version)
     problem = wait_for_release(node_id, version)
+    if problem is not None and _still_in_review(node_id, version):
+        print(
+            "::warning::%s %s was published and is still waiting for the registry's "
+            "review; it becomes the latest version once the review passes." % (node_id, version)
+        )
+        return 0
     if problem is not None:
         print("Registry check failed for %s %s: %s" % (node_id, version, problem))
         return 1
