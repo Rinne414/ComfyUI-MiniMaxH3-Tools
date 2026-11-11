@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-11
+
 ### Fixed
 
 - Image Encode (Low RAM): a `.gguf` text encoder no longer fills host RAM while
