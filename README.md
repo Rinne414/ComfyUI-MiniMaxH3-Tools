@@ -114,11 +114,16 @@ examples. The examples keep its seed fixed, so an unchanged idea comes from the
 cache instead of expanding again; with a changing seed every Queue would expand
 again. Its report names the instruction file it used.
 
-**GGUF text encoders (experimental, unverified).** With ComfyUI-GGUF `6ea2651`
-the stock load path copied a 14.6 GB `Q4_K_M` file into host RAM on a 32 GB PC and
-was stopped. Image Encode (Low RAM) loads `.gguf` files straight to the GPU
-instead, but that path is unverified. The INT8 `.safetensors` encoder is
-recommended.
+**GGUF text encoders (experimental).** With ComfyUI-GGUF `6ea2651` the stock
+load path copied a 14.6 GB `Q4_K_M` file into host RAM on a 32 GB PC and was
+stopped. Image Encode (Low RAM) loads `.gguf` files straight to the GPU and, on
+Windows, hands the file's mapped pages back to the system while it loads. Measured
+on an RTX 3090 with 32 GB RAM: `Q2_K` (8.5 GB) encodes in 7 s and `Q4_K_M`
+(14.6 GB) in 16 s, both at about 2 GB of resident RAM. In four same-seed
+comparisons (food scene, English and Chinese signs, object counts, one-picture
+edit) both followed the prompt like the INT8 encoder; `Q2_K` changed the
+composition the most. That is four pictures, not a quality study, and Linux was
+not measured. The INT8 `.safetensors` encoder stays the recommended one.
 
 ## Install
 

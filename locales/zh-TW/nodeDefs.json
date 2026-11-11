@@ -357,7 +357,7 @@
     "inputs": {
       "clip_name": {
         "name": "編碼器檔案",
-        "tooltip": "MiniMax H3 的 Qwen3-VL 文字編碼器，建議用 qwen3vl_32b_minimax_h3_int8_convrot；.gguf 檔案為實驗性（未驗證，需要 ComfyUI-GGUF 節點套件）。"
+        "tooltip": "MiniMax H3 的 Qwen3-VL 文字編碼器，建議用 qwen3vl_32b_minimax_h3_int8_convrot；.gguf 檔案為實驗性（需要 ComfyUI-GGUF 節點套件）。"
       },
       "prompt": {
         "name": "提示詞",

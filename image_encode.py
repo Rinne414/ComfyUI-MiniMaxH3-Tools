@@ -32,6 +32,7 @@ if __package__:
     )
     from .image_picture_refs import append_note, connected_pictures
     from .image_pinning import pinning_disabled
+    from .image_trim import mapped_pages_trimmed
 else:
     from conditioning_io import save_conditioning, zero_conditioning
     from image_cache import cache_key, file_identity, folder_stats, read_cache
@@ -44,6 +45,7 @@ else:
     )
     from image_picture_refs import append_note, connected_pictures
     from image_pinning import pinning_disabled
+    from image_trim import mapped_pages_trimmed
 
 # the encode ignores the canvas size; the latent comes from the size node instead
 _ENCODE_SIZE = 2048
@@ -146,7 +148,7 @@ def _schema_inputs() -> list:
             tooltip=(
                 "The MiniMax H3 Qwen3-VL text encoder; recommended: "
                 "qwen3vl_32b_minimax_h3_int8_convrot. .gguf files are "
-                "experimental (unverified, need the ComfyUI-GGUF pack)."
+                "experimental (need the ComfyUI-GGUF pack)."
             ),
         ),
         io.String.Input(
@@ -269,7 +271,8 @@ def vae_identity(vae) -> str:
 
 def encode_once(clip_name, prompt, vae, images):
     free_other_models()
-    with pinning_disabled(mm):  # no pinned host RAM for the one-shot encoder
+    # no pinned host RAM for the one-shot encoder; a mapped .gguf file must not pile up in RAM either
+    with pinning_disabled(mm), mapped_pages_trimmed(is_gguf(clip_name)):
         clip = load_text_encoder(clip_name)
         try:
             cond = MiniMaxH3ImageConditioning.execute(

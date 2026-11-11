@@ -357,7 +357,7 @@
     "inputs": {
       "clip_name": {
         "name": "clip_name",
-        "tooltip": "The MiniMax H3 Qwen3-VL text encoder; recommended: qwen3vl_32b_minimax_h3_int8_convrot. .gguf files are experimental (unverified, need the ComfyUI-GGUF pack)."
+        "tooltip": "The MiniMax H3 Qwen3-VL text encoder; recommended: qwen3vl_32b_minimax_h3_int8_convrot. .gguf files are experimental (need the ComfyUI-GGUF pack)."
       },
       "prompt": {
         "name": "prompt",

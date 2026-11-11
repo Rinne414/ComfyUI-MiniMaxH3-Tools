@@ -6,6 +6,16 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Image Encode (Low RAM): a `.gguf` text encoder no longer fills host RAM while
+  it loads on Windows. The mapped file pages are handed back during the load, so
+  an 8.5 GB `Q2_K` file peaks at about 2 GB of resident RAM instead of 9.4 GB,
+  and the 14.6 GB `Q4_K_M` file now loads on a 32 GB PC. `.gguf` stays
+  experimental.
+- Publish workflow: a release that is still waiting for the registry's review
+  ends the check with a warning instead of a failure.
+
 ## [0.2.0] - 2026-11-11
 
 MiniMax-H3-Image now runs on a 24 GB GPU with 32 GB of RAM: five new nodes and
